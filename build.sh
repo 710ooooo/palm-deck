@@ -12,7 +12,7 @@ for target in linux/amd64 linux/arm64 windows/amd64 windows/arm64 darwin/amd64 d
   mkdir -p "dist/$name"
   CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
     go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o "dist/$name/phone-deck$ext" .
-  cp README.md "dist/$name/"
+  cp README.md LICENSE "dist/$name/"
   (cd dist && zip -qr "$name.zip" "$name" && rm -rf "$name")
   echo "dist/$name.zip"
 done

@@ -196,3 +196,9 @@ go test ./...     # テスト（OBS は偽のサーバーを相手に確かめ�
 ```
 
 `v1.0.0` のようなタグを push すると、GitHub Actions が全 OS 向けの zip を Releases に公開します。
+
+## ライセンス
+
+[MIT License](LICENSE) です。
+
+Zoom・OBS・YouTube・Spotify・Discord などの名前やロゴは、それぞれの会社の商標です。Phone Deck はこれらの会社とは関係ありません。
