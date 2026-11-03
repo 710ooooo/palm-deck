@@ -1,0 +1,807 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phone Deck の編集</title>
+<style>
+  :root { --bg: #0f172a; --panel: #1e293b; --line: #334155; --fg: #e2e8f0; --muted: #94a3b8;
+    --accent: #3b82f6; --danger: #ef4444; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font: 14px/1.5 system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", sans-serif; }
+  body { display: flex; flex-direction: column; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  input, select, textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 7px 10px; width: 100%; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  textarea { min-height: 70px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  input[type=color] { padding: 2px; height: 36px; width: 56px; flex: none; }
+  input[type=checkbox] { width: auto; }
+  .btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 7px 12px;
+    cursor: pointer; white-space: nowrap; }
+  .btn:hover { border-color: #475569; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.danger { color: #fca5a5; }
+  .btn.danger.armed { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .icon-btn { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+  .icon-btn:hover { background: var(--line); color: var(--fg); }
+
+  header { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--line);
+    flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0 8px 0 0; }
+  .stepper { display: flex; align-items: center; gap: 8px; }
+  .stepper span { min-width: 1.5em; text-align: center; font-variant-numeric: tabular-nums; }
+  #saveState { color: var(--muted); font-size: 13px; }
+  #saveState.dirty { color: #fbbf24; }
+  #saveState.error { color: #fca5a5; }
+  .spacer { flex: 1; }
+  details.obs { position: relative; }
+  details.obs summary { cursor: pointer; list-style: none; }
+  details.obs .pop { position: absolute; top: 40px; left: 0; z-index: 5; width: 320px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 10px; box-shadow: 0 10px 30px #0008; }
+
+  main { flex: 1; display: grid; grid-template-columns: 220px 1fr 380px; min-height: 0; }
+  aside, #center, #form { overflow-y: auto; padding: 16px; }
+  aside { border-right: 1px solid var(--line); }
+  #form { border-left: 1px solid var(--line); }
+  h2 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 0 0 10px; }
+
+  /* ページ一覧 */
+  #pages { display: grid; gap: 4px; margin-bottom: 10px; }
+  .page { display: flex; align-items: center; gap: 2px; padding: 6px 6px 6px 10px; border-radius: 8px; cursor: pointer;
+    border: 1px solid transparent; }
+  .page:hover { background: var(--panel); }
+  .page.active { background: var(--panel); border-color: var(--line); }
+  .page.drop { border-color: var(--accent); background: #1e3a8a55; }
+  .page .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .page .count { color: var(--muted); font-size: 12px; margin-right: 4px; }
+  .page input { padding: 3px 6px; }
+  .page .tools { display: none; }
+  .page:hover .tools, .page.active .tools { display: flex; }
+
+  /* ボタンのマス目 */
+  .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+  .toolbar select { width: auto; max-width: 280px; }
+  #grid { display: grid; gap: 10px; max-width: 720px; grid-auto-rows: 130px; grid-auto-flow: dense; }
+  .tile { position: relative; border-radius: 14px; background: var(--c); color: #fff;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer;
+    box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 60%, #000); min-width: 0; padding: 4px; user-select: none; }
+  .tile .ti { font-size: 30px; line-height: 1; }
+  .tile .ti img, .iconbox .preview img { width: 36px; height: 36px; object-fit: contain; display: block; }
+  .iconbox { display: flex; gap: 12px; align-items: center; }
+  .iconbox .preview { width: 64px; height: 64px; flex: none; border-radius: 12px; background: var(--c, #334155);
+    display: grid; place-items: center; font-size: 30px; border: 2px dashed transparent; }
+  .iconbox .preview.drop { border-color: #fff; }
+  .iconbox .tools { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tile .tl { font-size: 12px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile .kind { font-size: 10px; opacity: .75; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tile.hidden { opacity: .4; }
+  .tile.hidden::after { content: "非表示"; position: absolute; top: 6px; right: 8px; font-size: 10px;
+    background: #000a; padding: 1px 6px; border-radius: 6px; }
+  .tile.sel { outline: 3px solid #fff; outline-offset: 2px; }
+  .tile.dragging { opacity: .25; }
+  .empty { color: var(--muted); padding: 40px 0; text-align: center; grid-column: 1 / -1;
+    border: 2px dashed var(--line); border-radius: 14px; }
+  .hint { color: var(--muted); font-size: 12px; margin: 10px 0 0; }
+
+  /* ボタンの設定 */
+  #form .none { color: var(--muted); text-align: center; margin-top: 60px; }
+  fieldset { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 0 0 14px; display: grid; gap: 10px; }
+  legend { color: var(--muted); font-size: 12px; padding: 0 6px; }
+  .f { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+  .f > * { color: var(--fg); font-size: 14px; }
+  .f > .help { color: var(--muted); font-size: 12px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .swatches { display: flex; gap: 4px; flex-wrap: wrap; }
+  .swatch { width: 22px; height: 22px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .swatch:hover { border-color: #fff; }
+  .help { color: var(--muted); font-size: 12px; line-height: 1.6; }
+  .help code { background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+  .check { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #000d; color: #fff;
+    padding: 10px 16px; border-radius: 10px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 80%; z-index: 20; }
+  #toast.show { opacity: 1; }
+  @media (max-width: 1000px) {
+    main { grid-template-columns: 1fr; }
+    aside, #form { border: 0; border-bottom: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Phone Deck の編集</h1>
+  <div class="stepper">列の数
+    <button class="btn" id="colMinus" aria-label="列を減らす">−</button><span id="colNum"></span><button class="btn" id="colPlus" aria-label="列を増やす">＋</button>
+  </div>
+  <details class="obs">
+    <summary class="btn">OBS の接続</summary>
+    <div class="pop">
+      <label class="f">接続先<input id="obsUrl" placeholder="ws://127.0.0.1:4455"></label>
+      <p class="help">空なら、この PC の OBS（ws://127.0.0.1:4455）につなぎます。OBS を別の PC で動かしているときや、OBS の WebSocket サーバー設定でポート番号を変えたときだけ入れます（例: ws://192.168.1.30:4455）。</p>
+      <label class="f">パスワード<input id="obsPassword" type="password" placeholder="OBS の WebSocket サーバー設定のパスワード" autocomplete="off"></label>
+      <p class="help">OBS の「ツール → WebSocket サーバー設定」で「WebSocket サーバーを有効にする」をオンにしてください。「認証を有効にする」がオンなら、そこに出ているパスワードを入れます。</p>
+    </div>
+  </details>
+  <span class="spacer"></span>
+  <span id="saveState"></span>
+  <button class="btn" id="reload">読み込み直す</button>
+  <button class="btn primary" id="save">保存</button>
+</header>
+<main>
+  <aside>
+    <h2>ページ</h2>
+    <div id="pages"></div>
+    <button class="btn" id="addPage">＋ ページを追加</button>
+    <p class="hint">ボタンをページ名にドラッグすると、そのページへ移動します。</p>
+  </aside>
+  <section id="center">
+    <div class="toolbar">
+      <button class="btn" id="addButton">＋ 空のボタン</button>
+      <select id="template"><option value="">＋ 用意されたボタンから追加…</option></select>
+      <button class="btn" id="fetchLogos" title="Zoom・OBS・YouTube・Spotify・Discord の「開く」ボタンに、公式サイトのアイコンを入れます">アプリのロゴを取得</button>
+    </div>
+    <div id="grid"></div>
+    <p class="hint">ボタンを押すと右で設定できます。ドラッグで並べ替えられます。保存するとスマホの画面にも反映されます（スマホは開き直してください）。</p>
+  </section>
+  <section id="form"></section>
+</main>
+<div id="toast"></div>
+<script>
+const EDIT_TOKEN = "__EDIT_TOKEN__";
+const COLORS = ["#3b82f6", "#2563eb", "#8b5cf6", "#5865f2", "#ec4899", "#ef4444", "#dc2626", "#f59e0b",
+  "#10b981", "#16a34a", "#0ea5e9", "#64748b", "#475569", "#334155"];
+
+let state = null;     // { version, config }
+let catalog = null;   // { actions, statuses, templates }
+let page = null;      // 選んでいるページ
+let sel = null;       // 選んでいるボタン（config.buttons の中のオブジェクト）
+let dirty = false;
+
+const $ = id => document.getElementById(id);
+const cfg = () => state.config;
+
+async function call(method, path, body) {
+  const res = await fetch(path, {
+    method, headers: { "X-Edit-Token": EDIT_TOKEN, "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || `エラー (${res.status})`), { status: res.status });
+  return data;
+}
+
+let toastTimer;
+function toast(text) {
+  $("toast").textContent = text;
+  $("toast").classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $("toast").classList.remove("show"), 3000);
+}
+
+function setSaveState(text, cls = "") {
+  $("saveState").textContent = text;
+  $("saveState").className = cls;
+}
+
+function markDirty() {
+  dirty = true;
+  setSaveState("未保存の変更があります", "dirty");
+}
+
+async function load() {
+  try {
+    const d = await call("GET", "/api/edit/config");
+    state = { version: d.version, config: d.config };
+    catalog = d.catalog;
+    cfg().buttons ||= [];
+    if (!cfg().pages.includes(page)) page = cfg().pages[0];
+    sel = null;
+    dirty = false;
+    setSaveState("");
+    $("obsUrl").value = cfg().obs?.url || "";
+    $("obsPassword").value = cfg().obs?.password || "";
+    fillTemplates();
+    renderAll();
+  } catch (e) {
+    setSaveState("読み込めません: " + e.message, "error");
+  }
+}
+
+async function save() {
+  const url = $("obsUrl").value.trim(), password = $("obsPassword").value;
+  cfg().obs = url || password ? { url: url || undefined, password: password || undefined } : undefined;
+  try {
+    const r = await call("PUT", "/api/edit/config", state);
+    state.version = r.version;
+    dirty = false;
+    setSaveState("保存しました");
+    toast("保存しました。スマホの画面を開き直すと反映されます");
+  } catch (e) {
+    setSaveState(e.message, "error");
+    toast(e.message);
+  }
+}
+
+function renderAll() {
+  $("colNum").textContent = cfg().columns;
+  $("colMinus").disabled = cfg().columns <= 1;
+  $("colPlus").disabled = cfg().columns >= 6;
+  renderPages();
+  renderGrid();
+  renderForm();
+}
+
+// ---- ページ ----
+let renaming = null;
+
+function uniqueName(base, list, current) {
+  let name = base, n = 2;
+  while (list.includes(name) && name !== current) name = `${base} ${n++}`;
+  return name;
+}
+
+function renderPages() {
+  const pages = cfg().pages;
+  $("pages").replaceChildren(...pages.map((p, i) => {
+    const el = document.createElement("div");
+    el.className = "page" + (p === page ? " active" : "");
+    if (renaming === p) {
+      const input = document.createElement("input");
+      input.value = p;
+      const done = commit => {
+        if (renaming !== p) return;
+        renaming = null;
+        const name = input.value.trim();
+        if (commit && name && name !== p) {
+          if (pages.includes(name)) toast(`「${name}」はもうあります`);
+          else renamePage(p, name);
+        }
+        renderAll();
+      };
+      input.addEventListener("keydown", e => {
+        if (e.key === "Enter") done(true);
+        if (e.key === "Escape") done(false);
+      });
+      input.addEventListener("blur", () => done(true));
+      el.append(input);
+      setTimeout(() => { input.focus(); input.select(); });
+      return el;
+    }
+    const count = cfg().buttons.filter(b => b.page === p).length;
+    el.innerHTML = `<span class="name"></span><span class="count">${count}</span><span class="tools">
+      <button class="icon-btn" data-a="up" title="上へ">↑</button><button class="icon-btn" data-a="down" title="下へ">↓</button>
+      <button class="icon-btn" data-a="rename" title="名前を変える">✎</button><button class="icon-btn" data-a="del" title="削除">🗑</button></span>`;
+    el.querySelector(".name").textContent = p;
+    el.querySelector("[data-a=up]").disabled = i === 0;
+    el.querySelector("[data-a=down]").disabled = i === pages.length - 1;
+    el.addEventListener("click", e => {
+      const a = e.target.closest("[data-a]")?.dataset.a;
+      if (a === "up" || a === "down") {
+        const j = a === "up" ? i - 1 : i + 1;
+        if (j < 0 || j >= pages.length) return;
+        [pages[i], pages[j]] = [pages[j], pages[i]];
+        markDirty();
+      } else if (a === "rename") {
+        renaming = p;
+      } else if (a === "del") {
+        deletePage(p, e.target);
+        return;
+      } else {
+        page = p;
+        if (sel?.page !== p) sel = null;
+      }
+      renderAll();
+    });
+    el.addEventListener("dblclick", () => { renaming = p; renderAll(); });
+    // ボタンをページ名にドロップ: そのページの最後へ移す
+    el.addEventListener("dragover", e => { if (dragged && dragged.page !== p) { e.preventDefault(); el.classList.add("drop"); } });
+    el.addEventListener("dragleave", () => el.classList.remove("drop"));
+    el.addEventListener("drop", e => {
+      e.preventDefault();
+      if (!dragged) return;
+      const b = dragged;
+      const list = cfg().buttons;
+      list.splice(list.indexOf(b), 1);
+      b.page = p;
+      list.push(b);
+      markDirty();
+      toast(`「${b.label || b.id}」を「${p}」へ移動しました`);
+      endDrag();
+    });
+    return el;
+  }));
+}
+
+function renamePage(from, to) {
+  cfg().pages = cfg().pages.map(p => (p === from ? to : p));
+  for (const b of cfg().buttons) if (b.page === from) b.page = to;
+  if (page === from) page = to;
+  markDirty();
+}
+
+// 削除は確認のため 2 回押す
+let armedPage = null, armTimer;
+function deletePage(p, btn) {
+  if (cfg().pages.length <= 1) return toast("ページは 1 つ以上必要です");
+  const count = cfg().buttons.filter(b => b.page === p).length;
+  if (armedPage !== p && count > 0) {
+    armedPage = p;
+    toast(`もう一度 🗑 を押すと「${p}」とボタン ${count} 個を削除します`);
+    clearTimeout(armTimer);
+    armTimer = setTimeout(() => (armedPage = null), 4000);
+    return;
+  }
+  armedPage = null;
+  cfg().pages = cfg().pages.filter(x => x !== p);
+  cfg().buttons = cfg().buttons.filter(b => b.page !== p);
+  if (page === p) page = cfg().pages[0];
+  if (sel?.page === p) sel = null;
+  markDirty();
+  renderAll();
+}
+
+$("addPage").addEventListener("click", () => {
+  const name = uniqueName("新しいページ", cfg().pages);
+  cfg().pages.push(name);
+  page = name;
+  sel = null;
+  renaming = name;
+  markDirty();
+  renderAll();
+});
+
+// ---- ボタンのマス目 ----
+let dragged = null, draggedEl = null;
+
+function endDrag() {
+  if (!dragged) return;
+  dragged = draggedEl = null;
+  renderAll();
+}
+// 元の要素が消えると dragend が届かないことがあるので、ここでも片付ける
+document.addEventListener("drop", () => setTimeout(endDrag));
+document.addEventListener("dragover", e => { if (dragged) e.preventDefault(); });
+
+function kindText(b) {
+  if (b.action) return catalog.actions.find(a => a.name === b.action.split(":")[0])?.label || b.action;
+  if (b.keys) return "キー: " + b.keys;
+  if (b.open) return "開く: " + b.open;
+  if (b.cmd) return "コマンド";
+  return "動作なし";
+}
+
+function renderGrid() {
+  const grid = $("grid");
+  grid.style.gridTemplateColumns = `repeat(${cfg().columns}, 1fr)`;
+  const list = cfg().buttons.filter(b => b.page === page);
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty">このページにはまだボタンがありません。上の「＋」から追加してください</div>';
+    return;
+  }
+  grid.replaceChildren(...list.map(b => {
+    const t = document.createElement("div");
+    t.className = "tile" + (b.hidden ? " hidden" : "") + (b === sel ? " sel" : "");
+    t.style.gridColumn = `span ${Math.min(b.w || 1, cfg().columns)}`;
+    t.style.gridRow = `span ${b.h || 1}`;
+    t.style.setProperty("--c", b.color || "#334155");
+    t.draggable = true;
+    t.innerHTML = `<span class="ti"></span><span class="tl"></span><span class="kind"></span>`;
+    setIcon(t.querySelector(".ti"), b);
+    t.querySelector(".tl").textContent = b.label || b.id;
+    t.querySelector(".kind").textContent = kindText(b);
+    t.addEventListener("click", () => { sel = b; renderGrid(); renderForm(); });
+    t.addEventListener("dragstart", e => {
+      dragged = b; draggedEl = t;
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", b.id);
+      t.classList.add("dragging");
+    });
+    t.addEventListener("dragend", endDrag);
+    t.addEventListener("dragover", e => {
+      if (!dragged) return;
+      e.preventDefault();
+      if (dragged === b) return;
+      // 相手の右半分に重ねたら後ろ、左半分なら前に入れる。描き直すとドラッグが切れるので DOM を動かす
+      const r = t.getBoundingClientRect();
+      const after = e.clientX > r.left + r.width / 2;
+      const arr = cfg().buttons;
+      const want = arr.indexOf(b) + (after ? 1 : 0);
+      const from = arr.indexOf(dragged);
+      if (want === from || want === from + 1) return;
+      arr.splice(from, 1);
+      arr.splice(arr.indexOf(b) + (after ? 1 : 0), 0, dragged);
+      if (after) t.after(draggedEl); else t.before(draggedEl);
+      markDirty();
+    });
+    return t;
+  }));
+}
+
+function uniqueId(base) {
+  const ids = new Set(cfg().buttons.map(b => b.id));
+  let id = base, n = 2;
+  while (ids.has(id)) id = `${base}-${n++}`;
+  return id;
+}
+
+function addButton(b) {
+  b.page = page;
+  cfg().buttons.push(b);
+  sel = b;
+  markDirty();
+  renderAll();
+}
+
+$("addButton").addEventListener("click", () =>
+  addButton({ id: uniqueId("button"), label: "新しいボタン", icon: "⭐", color: "#3b82f6" }));
+
+function fillTemplates() {
+  const s = $("template");
+  s.length = 1;
+  const groups = {};
+  catalog.templates.forEach((t, i) => {
+    if (!groups[t.group]) {
+      groups[t.group] = document.createElement("optgroup");
+      groups[t.group].label = t.group;
+      s.append(groups[t.group]);
+    }
+    const o = document.createElement("option");
+    o.value = i;
+    o.textContent = `${t.button.icon || ""} ${t.button.label}`;
+    groups[t.group].append(o);
+  });
+}
+
+$("template").addEventListener("change", e => {
+  if (e.target.value === "") return;
+  const b = structuredClone(catalog.templates[+e.target.value].button);
+  b.id = uniqueId(b.id);
+  e.target.value = "";
+  addButton(b);
+});
+
+// ---- ボタンの設定 ----
+const ACTION_KINDS = [["", "なし"], ["action", "用意された操作"], ["keys", "キーを押す"], ["open", "URL・ファイル・フォルダを開く"], ["cmd", "コマンドを実行"]];
+const STATUS_KINDS = [["", "なし"], ["status", "用意された状態"], ["statusCmd", "コマンドで調べる"]];
+
+// 種類を選んだ直後は中身が空文字なので、undefined かどうかで見分ける
+const has = v => v !== undefined && v !== null;
+const actionKind = b => (has(b.action) ? "action" : has(b.keys) ? "keys" : has(b.open) ? "open" : has(b.cmd) ? "cmd" : "");
+const statusKind = b => (has(b.status) ? "status" : has(b.statusCmd) ? "statusCmd" : "");
+
+function el(html) {
+  const t = document.createElement("template");
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+
+// 中にボタンなどが複数あるときは <label> にしない（ラベルを押すと中のボタンまで押されるため）
+function field(label, input, help) {
+  const plain = input.matches("input, select, textarea");
+  const l = el(plain ? `<label class="f"><span></span></label>` : `<div class="f"><span></span></div>`);
+  l.firstChild.textContent = label;
+  l.append(input);
+  if (help) l.append(el(`<span class="help">${help}</span>`));
+  return l;
+}
+
+// 入力するとすぐ sel に書き込み、マス目を描き直す
+function bindInput(input, get, set) {
+  input.value = get() || "";
+  input.addEventListener("input", () => { set(input.value); markDirty(); renderGrid(); renderPages(); });
+  return input;
+}
+
+function select(options, value) {
+  const s = document.createElement("select");
+  for (const [v, label] of options) {
+    const o = document.createElement("option");
+    o.value = v;
+    o.textContent = label;
+    s.append(o);
+  }
+  s.value = value;
+  return s;
+}
+
+function colorPicker(get, set) {
+  const wrap = el(`<div class="row"></div>`);
+  const input = el(`<input type="color">`);
+  input.value = get() || "#334155";
+  input.addEventListener("input", () => { set(input.value); markDirty(); renderGrid(); });
+  const sw = el(`<div class="swatches"></div>`);
+  for (const c of COLORS) {
+    const b = el(`<button class="swatch" type="button"></button>`);
+    b.style.background = c;
+    b.title = c;
+    b.addEventListener("click", () => { input.value = c; set(c); markDirty(); renderGrid(); });
+    sw.append(b);
+  }
+  wrap.append(input, sw);
+  return wrap;
+}
+
+// ---- アイコン（画像） ----
+// ロゴはアプリに入れず、公式サイトのアイコンをこの PC に取ってきて使う
+const LOGO_SITES = { zoom: "https://zoom.us", obs: "https://obsproject.com", yt: "https://www.youtube.com",
+  sp: "https://open.spotify.com", dc: "https://discord.com" };
+
+function siteFor(b) {
+  if (/^https?:\/\//.test(b.open || "")) return b.open;
+  return LOGO_SITES[b.id.split("-")[0]] || "";
+}
+
+function setIcon(span, b) {
+  if (b.image) {
+    const img = document.createElement("img");
+    img.src = "/icons/" + encodeURIComponent(b.image);
+    img.alt = "";
+    img.draggable = false;
+    span.replaceChildren(img);
+  } else {
+    span.textContent = b.icon || "";
+  }
+}
+
+async function uploadIcon(file) {
+  const res = await fetch("/api/edit/icon", { method: "POST", headers: { "X-Edit-Token": EDIT_TOKEN }, body: file });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `エラー (${res.status})`);
+  return data.name;
+}
+
+const fetchIcon = url => call("POST", "/api/edit/icon/fetch", { url }).then(r => r.name);
+
+let refreshPreview = () => {};
+
+function iconEditor(b) {
+  const box = el(`<div style="display:grid;gap:8px"><div class="iconbox"><div class="preview" title="画像をここにドロップできます"></div>
+    <div class="tools"><button class="btn" type="button" data-a="pick">画像を選ぶ</button>
+    <button class="btn" type="button" data-a="clear">画像をやめる</button></div></div>
+    <div class="row"><input placeholder="サイトの URL（例: https://www.youtube.com）"><button class="btn" type="button" data-a="fetch">サイトのアイコンを取得</button></div>
+    <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/x-icon,image/svg+xml,.ico,.svg" hidden></div>`);
+  const preview = box.querySelector(".preview");
+  const file = box.querySelector("input[type=file]");
+  const urlInput = box.querySelector(".row input");
+  urlInput.value = siteFor(b);
+  refreshPreview = () => {
+    preview.style.setProperty("--c", b.color || "#334155");
+    setIcon(preview, b);
+    box.querySelector("[data-a=clear]").disabled = !b.image;
+  };
+  refreshPreview();
+  const use = async p => {
+    try {
+      b.image = await p;
+      markDirty(); renderGrid(); refreshPreview();
+    } catch (e) { toast(e.message); }
+  };
+  box.querySelector("[data-a=pick]").addEventListener("click", () => file.click());
+  file.addEventListener("change", () => { if (file.files[0]) use(uploadIcon(file.files[0])); file.value = ""; });
+  box.querySelector("[data-a=clear]").addEventListener("click", () => { delete b.image; markDirty(); renderGrid(); refreshPreview(); });
+  box.querySelector("[data-a=fetch]").addEventListener("click", async e => {
+    if (!urlInput.value.trim()) return toast("サイトの URL を入れてください");
+    e.target.disabled = true;
+    e.target.textContent = "取得中…";
+    await use(fetchIcon(urlInput.value));
+    e.target.disabled = false;
+    e.target.textContent = "サイトのアイコンを取得";
+  });
+  preview.addEventListener("dragover", e => { if (e.dataTransfer.types.includes("Files")) { e.preventDefault(); preview.classList.add("drop"); } });
+  preview.addEventListener("dragleave", () => preview.classList.remove("drop"));
+  preview.addEventListener("drop", e => {
+    e.preventDefault();
+    preview.classList.remove("drop");
+    if (e.dataTransfer.files[0]) use(uploadIcon(e.dataTransfer.files[0]));
+  });
+  return box;
+}
+
+// 「〜を開く」ボタンに、そのアプリの公式サイトのアイコンを入れる
+$("fetchLogos").addEventListener("click", async e => {
+  const targets = cfg().buttons.filter(b => /^(zoom|obs|yt|sp|dc)-open(-\d+)?$/.test(b.id));
+  if (!targets.length) return toast("Zoom・OBS などの「開く」ボタンがありません。「用意されたボタンから追加」で足してください");
+  e.target.disabled = true;
+  const got = {}, failed = [];
+  for (const b of targets) {
+    const site = siteFor(b);
+    e.target.textContent = `取得中… ${b.label}`;
+    try {
+      got[site] ||= await fetchIcon(site);
+      b.image = got[site];
+    } catch (err) { failed.push(b.label); }
+  }
+  e.target.disabled = false;
+  e.target.textContent = "アプリのロゴを取得";
+  markDirty(); renderAll();
+  toast(failed.length ? `取得できなかったもの: ${failed.join("、")}` : `${targets.length} 個のボタンにロゴを入れました。「保存」を押すと反映されます`);
+});
+
+// "obs.scene:シーン名" を名前と引数に分ける
+const splitArg = v => { const i = (v || "").indexOf(":"); return i < 0 ? [v || "", ""] : [v.slice(0, i), v.slice(i + 1)]; };
+
+function catalogPicker(items, value, onChange) {
+  const [name, arg] = splitArg(value);
+  const wrap = el(`<div style="display:grid;gap:8px"></div>`);
+  const s = select(items.map(a => [a.name, a.label]), name || items[0].name);
+  const argInput = el(`<input>`);
+  argInput.value = arg;
+  const sync = () => {
+    const item = items.find(a => a.name === s.value);
+    argInput.style.display = item.arg ? "" : "none";
+    argInput.placeholder = item.arg || "";
+    onChange(item.arg && argInput.value ? `${s.value}:${argInput.value}` : s.value);
+    markDirty(); renderGrid();
+  };
+  s.addEventListener("change", sync);
+  argInput.addEventListener("input", sync);
+  wrap.append(s, argInput);
+  argInput.style.display = items.find(a => a.name === s.value)?.arg ? "" : "none";
+  argInput.placeholder = items.find(a => a.name === s.value)?.arg || "";
+  return wrap;
+}
+
+function renderForm() {
+  const form = $("form");
+  const b = sel;
+  if (!b) {
+    form.innerHTML = '<p class="none">ボタンを選ぶと、ここで設定できます</p>';
+    return;
+  }
+  form.replaceChildren();
+
+  // 見た目
+  const look = el(`<fieldset><legend>見た目</legend></fieldset>`);
+  look.append(
+    field("名前", bindInput(el(`<input>`), () => b.label, v => (b.label = v))),
+    field("アイコン", iconEditor(b)),
+    field("絵文字（画像がないときに使います）", bindInput(el(`<input>`), () => b.icon, v => { b.icon = v; refreshPreview(); }),
+      "Windows は Win + . 、Mac は Ctrl + ⌘ + Space で入力できます"),
+    field("色", colorPicker(() => b.color, v => { b.color = v; refreshPreview(); })),
+  );
+  const pageSel = select(cfg().pages.map(p => [p, p]), b.page);
+  pageSel.addEventListener("change", () => { b.page = pageSel.value; page = b.page; markDirty(); renderAll(); });
+  look.append(field("ページ", pageSel));
+  // 大きさ: 横・縦に何マス使うか
+  const size = el(`<div class="row"></div>`);
+  const sizeSel = (key, max, label) => {
+    const sel_ = select([...Array(max)].map((_, i) => [String(i + 1), `${label} ${i + 1} マス`]), String(b[key] || 1));
+    sel_.addEventListener("change", () => {
+      const v = +sel_.value;
+      if (v > 1) b[key] = v; else delete b[key];
+      markDirty(); renderGrid();
+    });
+    return sel_;
+  };
+  size.append(sizeSel("w", 6, "横"), sizeSel("h", 4, "縦"));
+  look.append(field("大きさ", size, "よく押すボタンや、曲名・シーン名など長い文字を出すボタンを大きくすると押しやすく、読みやすくなります。行の残りに入りきらないときは次の行に回り、空いたところには後ろのボタンが詰められます。列の数より広くしたときは、列いっぱいの幅になります"));
+  const shown = el(`<label class="check"><input type="checkbox"> スマホの画面に表示する</label>`);
+  shown.firstChild.checked = !b.hidden;
+  shown.firstChild.addEventListener("change", e => { b.hidden = !e.target.checked || undefined; markDirty(); renderGrid(); });
+  look.append(shown);
+  form.append(look);
+
+  // 押したときの動作
+  const act = el(`<fieldset><legend>押したときの動作</legend></fieldset>`);
+  const kind = actionKind(b);
+  const kindSel = select(ACTION_KINDS, kind);
+  kindSel.addEventListener("change", () => {
+    delete b.action; delete b.keys; delete b.focus; delete b.open; delete b.cmd;
+    if (kindSel.value === "action") b.action = catalog.actions[0].name;
+    else if (kindSel.value) b[kindSel.value] = "";
+    markDirty(); renderGrid(); renderForm();
+  });
+  act.append(kindSel);
+  if (kind === "action") {
+    act.append(catalogPicker(catalog.actions, b.action, v => (b.action = v)));
+  } else if (kind === "keys") {
+    act.append(
+      field("キー", bindInput(el(`<input placeholder="ctrl+shift+m">`), () => b.keys, v => (b.keys = v)),
+        "例: <code>ctrl+shift+m</code> <code>alt+a</code> <code>cmd+shift+a</code> <code>k</code> <code>f5</code>。修飾キーは ctrl / shift / alt / cmd（Mac の ⌘、Windows キー）"),
+      field("先に前に出すウィンドウ（省略可）", bindInput(el(`<input placeholder="YouTube">`), () => b.focus, v => (b.focus = v || undefined)),
+        "キーは前に出ているウィンドウにしか届きません。アプリが後ろにあると効かないショートカット（Discord や YouTube など）のときに、そのウィンドウのタイトルに含まれる文字を入れます。入れると、そのウィンドウを前に出してからキーを押します。Mac はアプリ名（例: Discord）を入れます。Zoom の「グローバルショートカット」のように、後ろにあっても効くものは空のままで大丈夫です"),
+    );
+  } else if (kind === "open") {
+    act.append(field("開くもの", bindInput(el(`<input placeholder="https://www.youtube.com や ~/Documents">`), () => b.open, v => (b.open = v)),
+      "URL、ファイル、フォルダ、<code>spotify:</code> のようなアプリの URL。<code>~</code> はホームフォルダ"));
+  } else if (kind === "cmd") {
+    act.append(field("コマンド", bindInput(el(`<textarea placeholder="code ~/notes"></textarea>`), () => b.cmd, v => (b.cmd = v)),
+      "Windows は cmd.exe、Mac と Linux は sh で実行します"));
+  }
+  form.append(act);
+
+  // 状態の表示
+  const st = el(`<fieldset><legend>状態の表示</legend></fieldset>`);
+  const sk = statusKind(b);
+  const skSel = select(STATUS_KINDS, sk);
+  skSel.addEventListener("change", () => {
+    delete b.status; delete b.statusCmd;
+    if (skSel.value === "status") b.status = catalog.statuses[0].name;
+    if (skSel.value === "statusCmd") b.statusCmd = "";
+    markDirty(); renderGrid(); renderForm();
+  });
+  st.append(skSel);
+  if (sk === "status") {
+    st.append(catalogPicker(catalog.statuses, b.status, v => (b.status = v)));
+  } else if (sk === "statusCmd") {
+    st.append(field("コマンド", bindInput(el(`<input placeholder="date +%H:%M">`), () => b.statusCmd, v => (b.statusCmd = v)),
+      "<code>on</code> / <code>off</code> を出力すると光る・消える。それ以外の文字はボタンに表示します"));
+  }
+  if (sk) {
+    st.append(field("on のときのアイコン（省略可）", bindInput(el(`<input>`), () => b.onIcon, v => (b.onIcon = v || undefined)),
+      "状態が on のときだけ、この絵文字に替わります（例: マイクの 🎙 をミュート中は 🔇 にする、録画ボタンを録画中は 🔴 にする）。空なら、on のときはボタンが白い枠で光るだけです"));
+    const onColor = el(`<label class="check"><input type="checkbox"> on のときに色を変える</label>`);
+    onColor.firstChild.checked = !!b.onColor;
+    onColor.firstChild.addEventListener("change", e => { b.onColor = e.target.checked ? "#ef4444" : undefined; markDirty(); renderForm(); });
+    st.append(onColor);
+    if (b.onColor) st.append(colorPicker(() => b.onColor, v => (b.onColor = v)));
+  }
+  form.append(st);
+
+  // その他
+  const more = el(`<fieldset><legend>その他</legend></fieldset>`);
+  more.append(field("ID", bindInput(el(`<input>`), () => b.id, v => (b.id = v.trim())),
+    "ボタンを見分けるための名前で、スマホには表示されません（ほかのボタンと同じ ID にはできません）。変えるのは、ほかのプログラムやスクリプトからこのボタンを押したいときです。<code>curl -X POST -H \"X-Token: トークン\" http://PC:8765/api/run/ID</code> のように ID で指定するので、覚えやすい ID にしておくと書きやすくなります。" +
+    "<br>注意: 用意されたボタンの ID（<code>yt-open</code> など）を変えると、「アプリのロゴを取得」の対象から外れます。"));
+  const actions = el(`<div class="actions"></div>`);
+  const test = el(`<button class="btn" type="button" title="保存する前に、このボタンの動作をこの PC で実行して試します">実行</button>`);
+  test.addEventListener("click", () => tryButton(b));
+  const dup = el(`<button class="btn" type="button">複製</button>`);
+  dup.addEventListener("click", () => {
+    const c = structuredClone(b);
+    c.id = uniqueId(b.id);
+    const arr = cfg().buttons;
+    arr.splice(arr.indexOf(b) + 1, 0, c);
+    sel = c;
+    markDirty(); renderAll();
+  });
+  const del = el(`<button class="btn danger" type="button">削除</button>`);
+  del.addEventListener("click", () => {
+    if (!del.classList.contains("armed")) {
+      del.classList.add("armed");
+      del.textContent = "もう一度押すと削除";
+      setTimeout(() => { del.classList.remove("armed"); del.textContent = "削除"; }, 3000);
+      return;
+    }
+    cfg().buttons = cfg().buttons.filter(x => x !== b);
+    sel = null;
+    markDirty(); renderAll();
+  });
+  actions.append(test, dup, del);
+  more.append(actions);
+  form.append(more);
+}
+
+async function tryButton(b) {
+  const url = $("obsUrl").value.trim(), password = $("obsPassword").value;
+  try {
+    const r = await call("POST", "/api/edit/run", { button: b, obs: url || password ? { url, password } : null });
+    let msg = r.ok ? "実行しました" : "失敗: " + r.message;
+    if (r.ok && r.message && r.message !== "started") msg += `（${r.message}）`;
+    if (r.state) msg += r.state.error ? ` / 状態: ⚠ ${r.state.error}` : ` / 状態: ${r.state.on ? "on" : "off"}${r.state.text ? "・" + r.state.text : ""}`;
+    toast(msg);
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+// ---- 上のバー ----
+$("colMinus").addEventListener("click", () => { cfg().columns--; markDirty(); renderAll(); });
+$("colPlus").addEventListener("click", () => { cfg().columns++; markDirty(); renderAll(); });
+$("obsUrl").addEventListener("input", markDirty);
+$("obsPassword").addEventListener("input", markDirty);
+$("save").addEventListener("click", save);
+$("reload").addEventListener("click", load);
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); save(); }
+});
+window.addEventListener("beforeunload", e => { if (dirty) e.preventDefault(); });
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Phone Deck</title>
+<style>
+  :root { --bg: #0f172a; --fg: #e2e8f0; --muted: #64748b; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font-family: system-ui, -apple-system, "Hiragino Sans", sans-serif;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  body { display: flex; flex-direction: column;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
+  header { display: flex; justify-content: space-between; align-items: center;
+    font-size: 14px; color: var(--muted); padding: 4px 4px 12px; }
+  #vol { font-variant-numeric: tabular-nums; }
+  #grid { flex: 1; display: grid; gap: 10px; min-height: 0; grid-auto-flow: dense; }
+  #grid button.big .icon { font-size: clamp(34px, 11vw, 64px); }
+  #grid button.big .icon img { width: clamp(44px, 14vw, 80px); height: clamp(44px, 14vw, 80px); }
+  #grid button.big .label { font-size: clamp(13px, 3.8vw, 18px); }
+  button { border: 0; border-radius: 16px; color: #fff; font: inherit;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    background: var(--c); box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 60%, #000);
+    transition: transform .06s, box-shadow .06s, filter .2s, background .2s; touch-action: manipulation;
+    min-width: 0; min-height: 0; overflow: hidden; }
+  button:active, button.pressed { transform: translateY(3px); box-shadow: 0 1px 0 color-mix(in srgb, var(--c) 60%, #000); }
+  button.ok { filter: brightness(1.35); }
+  button.ng { filter: grayscale(1) brightness(.7); }
+  /* 状態が on のボタンは白い枠で光らせる */
+  button.on { outline: 3px solid #fff; outline-offset: -3px;
+    box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 60%, #000), 0 0 18px color-mix(in srgb, var(--c) 70%, transparent); }
+  .icon { font-size: clamp(26px, 8vw, 44px); line-height: 1; }
+  .icon img { width: clamp(32px, 10vw, 56px); height: clamp(32px, 10vw, 56px); object-fit: contain; display: block; }
+  .tile .ti img { width: 30px; height: 30px; object-fit: contain; display: block; }
+  .label { font-size: clamp(11px, 3.2vw, 15px); font-weight: 600; max-width: 100%; padding: 0 6px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sub { font-size: clamp(10px, 2.8vw, 13px); opacity: .9; max-width: 100%; padding: 0 6px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .sub:empty { display: none; }
+  #tabs { display: flex; gap: 6px; overflow-x: auto; padding-top: 12px; scrollbar-width: none; }
+  #tabs:empty { display: none; }
+  .tab { all: unset; flex: none; padding: 8px 14px; border-radius: 999px; background: #1e293b;
+    color: #94a3b8; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .tab.active { background: var(--fg); color: var(--bg); }
+  .tab.over { outline: 2px solid #3b82f6; outline-offset: 1px; color: var(--fg); }
+  #msg { position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); z-index: 20;
+    background: #000c; padding: 8px 14px; border-radius: 10px; font-size: 13px;
+    opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90%; }
+  #msg.show { opacity: 1; }
+  #setup { margin: auto; grid-column: 1 / -1; grid-row: 1 / -1; text-align: center; color: var(--muted); line-height: 1.8; }
+  .hright { display: flex; align-items: center; gap: 12px; }
+  #gear { all: unset; font-size: 20px; line-height: 1; padding: 4px; cursor: pointer; }
+
+  /* 設定画面 */
+  #settings { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column;
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
+  #settings.open { display: flex; }
+  #settings h2 { font-size: 17px; margin: 4px 4px 12px; }
+  #settings #ptabs { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 12px; scrollbar-width: none; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #1e293b;
+    border-radius: 12px; }
+  .cols { justify-content: space-between; margin-bottom: 12px; }
+  .stepper { display: flex; align-items: center; gap: 14px; font-variant-numeric: tabular-nums; }
+  .sbtn { all: unset; width: 36px; height: 36px; border-radius: 10px; background: #334155; color: var(--fg);
+    display: grid; place-items: center; font-size: 16px; flex: none; cursor: pointer; }
+  .sbtn:disabled { opacity: .3; }
+  #scroll { flex: 1; overflow-y: auto; padding-bottom: 8px; }
+  .zone { display: grid; gap: 8px; min-height: 92px; padding: 8px; border-radius: 14px; grid-auto-rows: 76px; grid-auto-flow: dense;
+    border: 2px dashed #334155; transition: border-color .15s; }
+  .zone.over { border-color: #3b82f6; }
+  .zone:empty::before { content: attr(data-empty); grid-column: 1 / -1; align-self: center;
+    text-align: center; color: var(--muted); font-size: 13px; }
+  #hiddenZone { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+  .zlabel { font-size: 13px; color: var(--muted); margin: 16px 4px 6px; }
+  #shownZone .tile { grid-column: span var(--w, 1); grid-row: span var(--h, 1); }
+  .tile { border-radius: 12px; background: var(--c); color: #fff; cursor: grab;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    touch-action: none; min-width: 0; }
+  .tile .ti { font-size: 26px; line-height: 1; }
+  .tile .tl { font-size: 11px; font-weight: 600; max-width: 100%; padding: 0 4px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #hiddenZone .tile { filter: grayscale(.7) brightness(.75); }
+  .tile.dragging { opacity: .25; }
+  #ghost { position: fixed; z-index: 10; pointer-events: none; margin: 0;
+    transform: translate(-50%, -50%) scale(1.08); box-shadow: 0 10px 30px #000a; filter: none; }
+  .actions { display: flex; gap: 10px; padding-top: 8px; }
+  .actions button { flex: 1; height: 48px; box-shadow: none; flex-direction: row; font-weight: 600; }
+  .actions button:active { transform: none; box-shadow: none; filter: brightness(.85); }
+  .hint { font-size: 12px; color: var(--muted); margin: 0 4px 10px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<header><span>Phone Deck</span><span class="hright"><span id="vol"></span><button id="gear" aria-label="設定">⚙️</button></span></header>
+<div id="grid"></div>
+<nav id="tabs"></nav>
+<div id="settings">
+  <h2>ボタンの配置</h2>
+  <p class="hint">ドラッグで並べ替えられます。下の「非表示」に入れたボタンは画面に出なくなります（タップでも出し入れできます）。上のページ名にドラッグすると、そのページへ移動します。<br>ボタンやページの追加、押したときの動作の変更は、PC のブラウザで <b>http://localhost:<span id="port"></span>/edit</b> を開いて行います。</p>
+  <div id="ptabs"></div>
+  <div class="row cols"><span>列の数</span>
+    <span class="stepper"><button class="sbtn" id="colMinus" aria-label="列を減らす">−</button><span id="colNum"></span><button class="sbtn" id="colPlus" aria-label="列を増やす">＋</button></span>
+  </div>
+  <div id="scroll">
+    <div id="shownZone" class="zone" data-empty="ここにドラッグしたボタンが画面に表示されます"></div>
+    <div class="zlabel">非表示</div>
+    <div id="hiddenZone" class="zone" data-empty="ここにドラッグしたボタンは表示されなくなります"></div>
+  </div>
+  <div class="actions">
+    <button id="cancel" style="--c:#334155">キャンセル</button>
+    <button id="save" style="--c:#3b82f6">保存</button>
+  </div>
+</div>
+<div id="msg"></div>
+<script>
+// トークンは初回の URL (#t=...) から取り出して保存する
+const hashToken = new URLSearchParams(location.hash.slice(1)).get("t");
+if (hashToken) {
+  try { localStorage.setItem("token", hashToken); } catch {}
+  history.replaceState(null, "", location.pathname);
+}
+let token = hashToken;
+try { token = token || localStorage.getItem("token"); } catch {}
+
+const grid = document.getElementById("grid");
+const tabsEl = document.getElementById("tabs");
+const volEl = document.getElementById("vol");
+const msgEl = document.getElementById("msg");
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { ...opts, headers: { "X-Token": token || "" } });
+  if (res.status === 401) throw new Error("unauthorized");
+  return res.json();
+}
+
+function showAudio(a) {
+  if (!a) return;
+  volEl.textContent = a.muted ? "🔇 ミュート" : `🔊 ${a.volume}%`;
+}
+
+let msgTimer;
+function toast(text) {
+  msgEl.textContent = text;
+  msgEl.classList.add("show");
+  clearTimeout(msgTimer);
+  msgTimer = setTimeout(() => msgEl.classList.remove("show"), 2500);
+}
+
+// ---- ボタン画面 ----
+let current = null;   // サーバーから受け取った最新の設定
+let page = null;      // 表示中のページ名
+let shownEls = {};    // 表示中のボタン: id → { el, b }
+try { page = localStorage.getItem("page"); } catch {}
+
+const visible = (cfg, p) => cfg.buttons.filter(b => b.page === p && !b.hidden);
+
+// ボタンが横・縦に何マス使うか（列の数より広くはしない）
+const spanOf = (b, cols) => [Math.min(b.w || 1, cols), b.h || 1];
+
+// 大きいボタンがあるときの行の数。CSS の grid-auto-flow: dense と同じ順で、空いている所に詰めて置いてみる
+function rowsNeeded(list, cols) {
+  const used = [];
+  const free = (r, c) => !used[r]?.[c];
+  let rows = 0;
+  for (const b of list) {
+    const [w, h] = spanOf(b, cols);
+    for (let r = 0; ; r++) {
+      let c = 0;
+      for (; c + w <= cols; c++) {
+        let ok = true;
+        for (let y = r; y < r + h && ok; y++) for (let x = c; x < c + w && ok; x++) ok = free(y, x);
+        if (ok) break;
+      }
+      if (c + w > cols) continue;
+      for (let y = r; y < r + h; y++) for (let x = c; x < c + w; x++) (used[y] ||= [])[x] = true;
+      rows = Math.max(rows, r + h);
+      break;
+    }
+  }
+  return rows;
+}
+
+function setPage(p) {
+  page = p;
+  try { localStorage.setItem("page", p); } catch {}
+  render();
+  refreshStatus();
+}
+
+function render() {
+  const cfg = current;
+  if (!cfg.pages.includes(page)) page = cfg.pages[0];
+
+  tabsEl.replaceChildren(...(cfg.pages.length > 1 ? cfg.pages : []).map(p => {
+    const t = document.createElement("button");
+    t.className = "tab" + (p === page ? " active" : "");
+    t.textContent = p;
+    t.addEventListener("click", () => setPage(p));
+    return t;
+  }));
+  tabsEl.querySelector(".active")?.scrollIntoView({ inline: "nearest", block: "nearest" });
+
+  // どのページでもボタンの大きさがそろうよう、行の数は一番多いページに合わせる
+  const rows = Math.max(1, ...cfg.pages.map(p => rowsNeeded(visible(cfg, p), cfg.columns)));
+  grid.style.gridTemplateColumns = `repeat(${cfg.columns}, 1fr)`;
+  grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+  shownEls = {};
+  const shown = visible(cfg, page);
+  if (!shown.length) {
+    grid.innerHTML = '<div id="setup">このページに表示するボタンがありません<br>右上の ⚙️ から選んでください</div>';
+    return;
+  }
+  grid.replaceChildren(...shown.map(b => {
+    const el = document.createElement("button");
+    el.innerHTML = `<span class="icon"></span><span class="label"></span><span class="sub"></span>`;
+    el.querySelector(".label").textContent = b.label || b.id;
+    const [w, h] = spanOf(b, cfg.columns);
+    el.style.gridColumn = `span ${w}`;
+    el.style.gridRow = `span ${h}`;
+    if (w * h > 1) el.classList.add("big");
+    el.addEventListener("click", () => press(el, b));
+    shownEls[b.id] = { el, b };
+    applyState(el, b, null);
+    return el;
+  }));
+}
+
+// アイコンを入れる。画像があれば画像、なければ絵文字（on のときの絵文字があればそれを優先）
+function setIcon(span, b, on) {
+  const emoji = on && b.onIcon;
+  if (b.image && !emoji) {
+    const src = "/icons/" + encodeURIComponent(b.image);
+    if (span.firstChild?.tagName !== "IMG" || span.firstChild.getAttribute("src") !== src) {
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = "";
+      img.draggable = false;
+      span.replaceChildren(img);
+    }
+  } else {
+    span.textContent = emoji || b.icon || "";
+  }
+}
+
+// 状態に合わせて、光らせる・アイコンと色を替える・文字を出す
+function applyState(el, b, st) {
+  const on = !!st?.on;
+  el.classList.toggle("on", on);
+  setIcon(el.querySelector(".icon"), b, on);
+  el.style.setProperty("--c", (on && b.onColor) || b.color || "#334155");
+  el.querySelector(".sub").textContent = st?.error ? "⚠ 未接続" : (st?.text || "");
+  el.dataset.error = st?.error || "";
+}
+
+async function press(btn, b) {
+  navigator.vibrate?.(15);
+  try {
+    const r = await api(`/api/run/${encodeURIComponent(b.id)}`, { method: "POST" });
+    btn.classList.add(r.ok ? "ok" : "ng");
+    if (!r.ok) toast(r.message || "失敗しました");
+    showAudio(r.audio);
+    if (r.state) applyState(btn, b, r.state);
+  } catch (e) {
+    btn.classList.add("ng");
+    toast("PCに接続できません");
+  }
+  setTimeout(() => btn.classList.remove("ok", "ng"), 250);
+}
+
+async function load() {
+  if (!token) {
+    grid.innerHTML = '<div id="setup">PCで表示された URL<br>(#t=... 付き) を開いてください</div>';
+    return;
+  }
+  try {
+    current = await api("/api/buttons");
+    render();
+    refreshStatus();
+  } catch (e) {
+    grid.innerHTML = `<div id="setup">${e.message === "unauthorized"
+      ? "トークンが違います。PCに表示された URL を開き直してください"
+      : "PCに接続できません。サーバーが起動しているか確認してください"}</div>`;
+  }
+}
+
+// 表示中のページのうち、状態を持つボタンだけを問い合わせる
+let refreshing = false;
+async function refreshStatus() {
+  if (refreshing || !token || document.hidden || isOpen()) return;
+  refreshing = true;
+  try {
+    const ids = Object.values(shownEls).filter(x => x.b.hasStatus).map(x => x.b.id);
+    const r = await api("/api/status?ids=" + ids.map(encodeURIComponent).join(","));
+    showAudio(r.audio);
+    for (const [id, st] of Object.entries(r.states || {})) {
+      const x = shownEls[id];
+      if (x) applyState(x.el, x.b, st);
+    }
+  } catch {}
+  refreshing = false;
+}
+
+// ---- 設定画面 ----
+// draft.pages: [{ name, shown: [ボタンの番号], hidden: [...] }]。編集中のページだけ DOM が正
+let draft = null;
+let editPage = null;
+const settingsEl = document.getElementById("settings");
+const ptabsEl = document.getElementById("ptabs");
+const scrollEl = document.getElementById("scroll");
+const shownZone = document.getElementById("shownZone");
+const hiddenZone = document.getElementById("hiddenZone");
+const colNum = document.getElementById("colNum");
+function isOpen() { return settingsEl.classList.contains("open"); }
+
+document.getElementById("port").textContent = location.port || "80";
+
+function openSettings() {
+  if (!current) return toast("PCに接続できません");
+  draft = {
+    columns: current.columns,
+    buttons: current.buttons,
+    pages: current.pages.map(name => {
+      const idx = current.buttons.map((b, i) => [b, i]).filter(([b]) => b.page === name);
+      return { name, shown: idx.filter(([b]) => !b.hidden).map(([, i]) => i),
+                     hidden: idx.filter(([b]) => b.hidden).map(([, i]) => i) };
+    }),
+  };
+  showEditPage(page);
+  renderColumns();
+  settingsEl.classList.add("open");
+}
+
+function closeSettings() { endDrag(); settingsEl.classList.remove("open"); refreshStatus(); }
+
+const draftPage = name => draft.pages.find(p => p.name === name);
+
+// 編集中のページの DOM の並びを draft に書き戻す
+function commit() {
+  const p = draftPage(editPage);
+  const idx = zone => [...zone.children].map(t => +t.dataset.idx);
+  p.shown = idx(shownZone);
+  p.hidden = idx(hiddenZone);
+}
+
+// 呼ぶ前に、今のページの並びを commit() しておくこと
+function showEditPage(name) {
+  editPage = draftPage(name) ? name : draft.pages[0].name;
+  const p = draftPage(editPage);
+  shownZone.replaceChildren(...p.shown.map(makeTile));
+  hiddenZone.replaceChildren(...p.hidden.map(makeTile));
+  renderPageTabs();
+  scrollEl.scrollTop = 0;
+}
+
+function renderPageTabs() {
+  ptabsEl.replaceChildren(...draft.pages.map(p => {
+    const t = document.createElement("button");
+    t.className = "tab" + (p.name === editPage ? " active" : "");
+    t.dataset.page = p.name;
+    t.textContent = `${p.name} (${p.shown.length})`;
+    t.addEventListener("click", () => { commit(); showEditPage(p.name); });
+    return t;
+  }));
+}
+
+function renderColumns() {
+  colNum.textContent = draft.columns;
+  shownZone.style.gridTemplateColumns = `repeat(${draft.columns}, 1fr)`;
+  for (const t of shownZone.children) applySpan(t);
+  document.getElementById("colMinus").disabled = draft.columns <= 1;
+  document.getElementById("colPlus").disabled = draft.columns >= 6;
+}
+
+function applySpan(t) {
+  const [w, h] = spanOf(draft.buttons[t.dataset.idx], draft.columns);
+  t.style.setProperty("--w", w);
+  t.style.setProperty("--h", h);
+}
+
+function makeTile(i) {
+  const b = draft.buttons[i];
+  const t = document.createElement("div");
+  t.className = "tile";
+  t.dataset.idx = i;  // 同じ id のボタンがあっても区別できるよう、番号で覚える
+  t.style.setProperty("--c", b.color || "#334155");
+  t.innerHTML = `<span class="ti"></span><span class="tl"></span>`;
+  setIcon(t.querySelector(".ti"), b, false);
+  applySpan(t);
+  t.querySelector(".tl").textContent = b.label || b.id;
+  t.addEventListener("pointerdown", e => {
+    if (e.button > 0) return;
+    drag = { el: t, x0: e.clientX, y0: e.clientY, ghost: null, toPage: null };
+  });
+  return t;
+}
+
+// ドラッグ中の状態。少し動かすまではタップ扱い
+let drag = null;
+
+function startDrag() {
+  const r = drag.el.getBoundingClientRect();
+  const g = drag.el.cloneNode(true);
+  g.id = "ghost";
+  g.style.width = r.width + "px";
+  g.style.height = r.height + "px";
+  document.body.append(g);
+  drag.ghost = g;
+  drag.el.classList.add("dragging");
+  navigator.vibrate?.(10);
+}
+
+function moveDrag(x, y) {
+  drag.ghost.style.left = x + "px";
+  drag.ghost.style.top = y + "px";
+
+  const under = document.elementFromPoint(x, y);
+  // ページ名の上: 離したらそのページへ移動する
+  const ptab = under?.closest("#ptabs .tab");
+  drag.toPage = ptab && ptab.dataset.page !== editPage ? ptab.dataset.page : null;
+  for (const t of ptabsEl.children) t.classList.toggle("over", t.dataset.page === drag.toPage);
+  if (drag.toPage) return;
+
+  const tile = under?.closest(".tile");
+  const zone = under?.closest(".zone");
+  const el = drag.el;
+  if (tile && tile !== el) {
+    // 同じ枠の中で後ろへ動かすときは相手の後ろに、それ以外は前に入れる
+    const following = el.compareDocumentPosition(tile) & Node.DOCUMENT_POSITION_FOLLOWING;
+    if (tile.parentNode === el.parentNode && following) tile.after(el);
+    else tile.before(el);
+  } else if (zone && !tile && zone !== el.parentNode) {
+    zone.append(el);
+  }
+  for (const z of [shownZone, hiddenZone]) z.classList.toggle("over", z === el.parentNode);
+
+  // 端に近づいたらスクロール
+  const sr = scrollEl.getBoundingClientRect();
+  if (y < sr.top + 40) scrollEl.scrollTop -= 12;
+  else if (y > sr.bottom - 40) scrollEl.scrollTop += 12;
+}
+
+function endDrag() {
+  if (!drag) return;
+  drag.ghost?.remove();
+  drag.el.classList.remove("dragging");
+  shownZone.classList.remove("over");
+  hiddenZone.classList.remove("over");
+  for (const t of ptabsEl.children) t.classList.remove("over");
+  drag = null;
+}
+
+window.addEventListener("pointermove", e => {
+  if (!drag) return;
+  if (!drag.ghost) {
+    if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 8) return;
+    startDrag();
+  }
+  e.preventDefault();
+  moveDrag(e.clientX, e.clientY);
+});
+window.addEventListener("pointerup", () => {
+  if (!drag) return;
+  if (!drag.ghost) {  // タップ: 表示 ⇔ 非表示 を入れ替える
+    (drag.el.parentNode === shownZone ? hiddenZone : shownZone).append(drag.el);
+  } else if (drag.toPage) {  // ページ名の上で離した: そのページの最後に移す
+    const el = drag.el, to = drag.toPage;
+    endDrag();
+    el.remove();
+    commit();
+    draftPage(to).shown.push(+el.dataset.idx);
+    renderPageTabs();
+    toast(`「${to}」に移動しました`);
+    return;
+  }
+  commit();
+  renderPageTabs();
+  endDrag();
+});
+window.addEventListener("pointercancel", endDrag);
+
+async function saveSettings() {
+  commit();
+  const ids = list => list.map(i => draft.buttons[i].id);
+  try {
+    const res = await fetch("/api/layout", {
+      method: "POST",
+      headers: { "X-Token": token || "", "Content-Type": "application/json" },
+      body: JSON.stringify({
+        columns: draft.columns,
+        pages: draft.pages.map(p => ({ name: p.name, shown: ids(p.shown), hidden: ids(p.hidden) })),
+      }),
+    });
+    const r = await res.json();
+    if (!res.ok) throw new Error(r.error || "保存できませんでした");
+    page = editPage;
+    try { localStorage.setItem("page", page); } catch {}
+    closeSettings();
+    toast("保存しました");
+    load();
+  } catch (e) {
+    toast(e instanceof TypeError ? "PCに接続できません" : e.message);
+  }
+}
+
+document.getElementById("gear").addEventListener("click", openSettings);
+document.getElementById("cancel").addEventListener("click", closeSettings);
+document.getElementById("save").addEventListener("click", saveSettings);
+document.getElementById("colMinus").addEventListener("click", () => { draft.columns--; renderColumns(); });
+document.getElementById("colPlus").addEventListener("click", () => { draft.columns++; renderColumns(); });
+
+load();
+setInterval(refreshStatus, 2000);
+// 編集中に画面を開き直しても、編集内容を消さない
+document.addEventListener("visibilitychange", () => { if (!document.hidden && !isOpen()) load(); });
+</script>
+</body>
+</html>
