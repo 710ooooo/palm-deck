@@ -52,7 +52,7 @@ func (s *server) handleButtons(w http.ResponseWriter, r *http.Request) {
 	buttons := make([]publicButton, len(c.Buttons))
 	for i, b := range c.Buttons {
 		buttons[i] = publicButton{
-			ID: b.ID, Label: b.Label, Icon: b.Icon, Image: b.Image, Color: b.Color, Page: c.pageOf(b, pages),
+			ID: b.ID, Label: b.Label, Icon: b.Icon, Image: b.Image, ImageFill: b.ImageFill, Color: b.Color, Page: c.pageOf(b, pages),
 			W: b.W, H: b.H,
 			OnIcon: b.OnIcon, OnColor: b.OnColor, HasStatus: b.Status != "" || b.StatusCmd != "",
 			Hidden: b.Hidden,

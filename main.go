@@ -29,14 +29,15 @@ var staticFiles embed.FS
 var version = "dev"
 
 type Button struct {
-	ID    string `json:"id"`
-	Label string `json:"label"`
-	Icon  string `json:"icon,omitempty"`  // 絵文字
-	Image string `json:"image,omitempty"` // 画像アイコン（設定フォルダの icons/ の中のファイル名）。icon より優先
-	Color string `json:"color,omitempty"`
-	Page  string `json:"page,omitempty"` // 表示するページ（省略すると最初のページ）
-	W     int    `json:"w,omitempty"`    // 横に何マス使うか（省略すると 1）
-	H     int    `json:"h,omitempty"`    // 縦に何マス使うか（省略すると 1）
+	ID        string `json:"id"`
+	Label     string `json:"label"`
+	Icon      string `json:"icon,omitempty"`      // 絵文字
+	Image     string `json:"image,omitempty"`     // 画像アイコン（設定フォルダの icons/ の中のファイル名）。icon より優先
+	ImageFill bool   `json:"imageFill,omitempty"` // 画像をボタン全体に広げる（端は切れる）
+	Color     string `json:"color,omitempty"`
+	Page      string `json:"page,omitempty"` // 表示するページ（省略すると最初のページ）
+	W         int    `json:"w,omitempty"`    // 横に何マス使うか（省略すると 1）
+	H         int    `json:"h,omitempty"`    // 縦に何マス使うか（省略すると 1）
 
 	// 押したときの動作。どれか 1 つを書く
 	Action string `json:"action,omitempty"` // 組み込み操作 (media.playpause, obs.scene:シーン名 など)
@@ -67,6 +68,7 @@ type publicButton struct {
 	Label     string `json:"label"`
 	Icon      string `json:"icon,omitempty"`
 	Image     string `json:"image,omitempty"`
+	ImageFill bool   `json:"imageFill,omitempty"`
 	Color     string `json:"color,omitempty"`
 	Page      string `json:"page"`
 	W         int    `json:"w,omitempty"`

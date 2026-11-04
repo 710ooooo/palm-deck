@@ -38,6 +38,13 @@
     box-shadow: 0 4px 0 color-mix(in srgb, var(--c) 60%, #000), 0 0 18px color-mix(in srgb, var(--c) 70%, transparent); }
   .icon { font-size: clamp(26px, 8vw, 44px); line-height: 1; }
   .icon img { width: clamp(32px, 10vw, 56px); height: clamp(32px, 10vw, 56px); object-fit: contain; display: block; }
+  /* 画像をボタン全体に広げる。名前と状態の文字は画像の下の方に重ねる */
+  button.fill { position: relative; justify-content: flex-end; padding-bottom: 8px; }
+  button.fill .icon { position: absolute; inset: 0; z-index: 0; }
+  #grid button.fill .icon img { width: 100%; height: 100%; object-fit: cover; }
+  button.fill .label, button.fill .sub { position: relative; z-index: 1; text-shadow: 0 1px 3px #000, 0 0 8px #000; }
+  button.fill::after { content: ""; position: absolute; inset: 40% 0 0; z-index: 0;
+    background: linear-gradient(transparent, rgb(0 0 0 / .55)); pointer-events: none; }
   .tile .ti img { width: 30px; height: 30px; object-fit: contain; display: block; }
   .label { font-size: clamp(11px, 3.2vw, 15px); font-weight: 600; max-width: 100%; padding: 0 6px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -253,6 +260,8 @@ function setIcon(span, b, on) {
 function applyState(el, b, st) {
   const on = !!st?.on;
   el.classList.toggle("on", on);
+  // on のときの絵文字を出している間は、ふつうの大きさに戻す
+  el.classList.toggle("fill", !!(b.imageFill && b.image && !(on && b.onIcon)));
   setIcon(el.querySelector(".icon"), b, on);
   el.style.setProperty("--c", (on && b.onColor) || b.color || "#334155");
   el.querySelector(".sub").textContent = st?.error ? "⚠ 未接続" : (st?.text || "");

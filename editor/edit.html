@@ -78,6 +78,14 @@
   .tile .tl { font-size: 12px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tile .kind { font-size: 10px; opacity: .75; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tile.hidden { opacity: .4; }
+  /* 画像をボタン全体に広げる（スマホの画面と同じ見た目） */
+  .tile.fill { justify-content: flex-end; overflow: hidden; }
+  .tile.fill .ti { position: absolute; inset: 0; z-index: 0; }
+  .tile.fill .ti img, .iconbox .preview.fill img { width: 100%; height: 100%; object-fit: cover; }
+  .tile.fill .tl, .tile.fill .kind { position: relative; z-index: 1; text-shadow: 0 1px 3px #000, 0 0 8px #000; }
+  .tile.fill::after { content: ""; position: absolute; inset: 40% 0 0; z-index: 0;
+    background: linear-gradient(transparent, rgb(0 0 0 / .55)); pointer-events: none; border-radius: inherit; }
+  .iconbox .preview { overflow: hidden; }
   .tile.hidden::after { content: "非表示"; position: absolute; top: 6px; right: 8px; font-size: 10px;
     background: #000a; padding: 1px 6px; border-radius: 6px; }
   .tile.sel { outline: 3px solid #fff; outline-offset: 2px; }
@@ -384,7 +392,7 @@ function renderGrid() {
   }
   grid.replaceChildren(...list.map(b => {
     const t = document.createElement("div");
-    t.className = "tile" + (b.hidden ? " hidden" : "") + (b === sel ? " sel" : "");
+    t.className = "tile" + (b.hidden ? " hidden" : "") + (b === sel ? " sel" : "") + (b.image && b.imageFill ? " fill" : "");
     t.style.gridColumn = `span ${Math.min(b.w || 1, cfg().columns)}`;
     t.style.gridRow = `span ${b.h || 1}`;
     t.style.setProperty("--c", b.color || "#334155");
@@ -562,16 +570,23 @@ function iconEditor(b) {
   const box = el(`<div style="display:grid;gap:8px"><div class="iconbox"><div class="preview" title="画像をここにドロップできます"></div>
     <div class="tools"><button class="btn" type="button" data-a="pick">画像を選ぶ</button>
     <button class="btn" type="button" data-a="clear">画像をやめる</button></div></div>
+    <label class="check"><input type="checkbox" data-a="fill"> 画像をボタン全体に広げる</label>
+    <p class="hint" style="margin:0">写真や、文字まで描き込んだ画像を使うときに向いています。ボタンの形に合わせて画像の端が切れ、名前は画像の下の方に重ねて出ます。ロゴなど小さく見せたい画像はオフのままにしてください</p>
     <div class="row"><input placeholder="サイトの URL（例: https://www.youtube.com）"><button class="btn" type="button" data-a="fetch">サイトのアイコンを取得</button></div>
     <input type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/x-icon,image/svg+xml,.ico,.svg" hidden></div>`);
   const preview = box.querySelector(".preview");
   const file = box.querySelector("input[type=file]");
   const urlInput = box.querySelector(".row input");
+  const fill = box.querySelector("[data-a=fill]");
+  fill.addEventListener("change", () => { b.imageFill = fill.checked || undefined; markDirty(); renderGrid(); refreshPreview(); });
   urlInput.value = siteFor(b);
   refreshPreview = () => {
     preview.style.setProperty("--c", b.color || "#334155");
     setIcon(preview, b);
     box.querySelector("[data-a=clear]").disabled = !b.image;
+    preview.classList.toggle("fill", !!(b.image && b.imageFill));
+    fill.checked = !!b.imageFill;
+    fill.disabled = !b.image;
   };
   refreshPreview();
   const use = async p => {
