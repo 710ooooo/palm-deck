@@ -64,6 +64,13 @@
   #setup { margin: auto; grid-column: 1 / -1; grid-row: 1 / -1; text-align: center; color: var(--muted); line-height: 1.8; }
   .hright { display: flex; align-items: center; gap: 12px; }
   #gear { all: unset; font-size: 20px; line-height: 1; padding: 4px; cursor: pointer; }
+  /* 横画面: 上のタイトルの行をなくし、音量と ⚙️ はページのタブの右に置いて、ボタンに高さを回す */
+  body.land { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) auto;
+    padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+  body.land header { display: contents; }
+  body.land header > span:first-child { display: none; }
+  body.land #grid { grid-column: 1 / -1; }
+  body.land .hright { grid-column: 2; grid-row: 2; padding: 12px 4px 0 12px; font-size: 14px; color: var(--muted); }
 
   /* 設定画面 */
   #settings { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column;
@@ -193,6 +200,35 @@ function rowsNeeded(list, cols) {
   return rows;
 }
 
+// どのページでもボタンの大きさがそろうよう、行の数は一番多いページに合わせる
+const rowsFor = (cfg, cols) => Math.max(1, ...cfg.pages.map(p => rowsNeeded(visible(cfg, p), cols)));
+
+// 列と行の数。縦画面は設定どおり。横画面は列を増やして、ボタンが正方形に近くなる列の数にする
+// （設定の列の数のままだと、横に細長い帯になって名前が入らないため）
+function layout(cfg) {
+  const land = innerWidth > innerHeight;
+  document.body.classList.toggle("land", land);
+  let best = { cols: cfg.columns, rows: rowsFor(cfg, cfg.columns) };
+  if (!land) return best;
+  const W = grid.clientWidth, H = grid.clientHeight, gap = 10;
+  const skew = ({ cols, rows }) => Math.abs(Math.log(((W - gap * (cols - 1)) / cols) / ((H - gap * (rows - 1)) / rows)));
+  for (let cols = cfg.columns + 1; cols <= cfg.columns * 4 && cols <= 12; cols++) {
+    const c = { cols, rows: rowsFor(cfg, cols) };
+    if (skew(c) < skew(best)) best = c;
+  }
+  return best;
+}
+
+// 画面を回したときに、列と行の数が変わるなら並べ直す
+let lastLayout = "";
+addEventListener("resize", () => {
+  if (!current || isOpen() || !shownEls || !Object.keys(shownEls).length) return;
+  const { cols, rows } = layout(current);
+  if (`${cols}x${rows}` === lastLayout) return;
+  render();
+  refreshStatus();
+});
+
 function setPage(p) {
   page = p;
   try { localStorage.setItem("page", p); } catch {}
@@ -213,9 +249,9 @@ function render() {
   }));
   tabsEl.querySelector(".active")?.scrollIntoView({ inline: "nearest", block: "nearest" });
 
-  // どのページでもボタンの大きさがそろうよう、行の数は一番多いページに合わせる
-  const rows = Math.max(1, ...cfg.pages.map(p => rowsNeeded(visible(cfg, p), cfg.columns)));
-  grid.style.gridTemplateColumns = `repeat(${cfg.columns}, 1fr)`;
+  const { cols, rows } = layout(cfg);
+  lastLayout = `${cols}x${rows}`;
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
   grid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
   shownEls = {};
@@ -228,7 +264,7 @@ function render() {
     const el = document.createElement("button");
     el.innerHTML = `<span class="icon"></span><span class="label"></span><span class="sub"></span>`;
     el.querySelector(".label").textContent = b.label || b.id;
-    const [w, h] = spanOf(b, cfg.columns);
+    const [w, h] = spanOf(b, cols);
     el.style.gridColumn = `span ${w}`;
     el.style.gridRow = `span ${h}`;
     if (w * h > 1) el.classList.add("big");
