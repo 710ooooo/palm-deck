@@ -1,4 +1,4 @@
-module github.com/710ooooo/phone-deck
+module github.com/710ooooo/palm-deck
 
 go 1.24.2
 

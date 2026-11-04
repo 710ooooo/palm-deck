@@ -1,4 +1,4 @@
-// Phone Deck: スマホのブラウザを Stream Deck 代わりにする小さなサーバー。
+// Palm Deck: スマホのブラウザを Stream Deck 代わりにする小さなサーバー。
 //
 // buttons.json に書いたボタンだけを実行する。スマホからは任意コマンドを送れない。
 // LAN 内の他人に押されないよう、トークン付き URL でアクセスする。
@@ -136,7 +136,7 @@ func main() {
 		log.Fatalf("ポート %d を開けません（すでに起動していませんか？）: %v", *port, err)
 	}
 
-	fmt.Printf("Phone Deck %s\n", version)
+	fmt.Printf("Palm Deck %s\n", version)
 	fmt.Printf("設定ファイル: %s\n\n", s.configPath)
 	ips := lanIPs()
 	if len(ips) == 0 {
@@ -165,7 +165,7 @@ func main() {
 
 func defaultDir() string {
 	if d, err := os.UserConfigDir(); err == nil {
-		return filepath.Join(d, "phone-deck")
+		return filepath.Join(d, "palm-deck")
 	}
 	return "."
 }

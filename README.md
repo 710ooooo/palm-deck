@@ -1,6 +1,6 @@
-# Phone Deck
+# Palm Deck
 
-スマホを Stream Deck の代わりにするアプリです。PC で `phone-deck` を起動し、スマホでQRコードを読み取るとボタンが並んだ画面が開きます。
+スマホを Stream Deck の代わりにするアプリです。PC で `palm-deck` を起動し、スマホでQRコードを読み取るとボタンが並んだ画面が開きます。
 
 - スマホ側はブラウザだけで動きます（iPhone / Android。アプリのインストールは不要です）
 - PC 側は実行ファイルが1つだけで動きます（Windows / Mac / Linux。Python などの追加インストールは不要です）
@@ -17,10 +17,10 @@
    | Mac (Intel) | `darwin-amd64` |
    | Linux | `linux-amd64` / `linux-arm64` |
 
-2. `phone-deck` を起動します
-   - **Windows**: `phone-deck.exe` をダブルクリックします。「Windows によって PC が保護されました」と表示されたら「詳細情報」→「実行」を選びます。ファイアウォールの確認が出たら「プライベート ネットワーク」を許可してください
-   - **Mac**: ターミナルで `xattr -d com.apple.quarantine phone-deck` を実行してから `./phone-deck` を実行します（署名していないため、最初の1回だけ必要です）
-   - **Linux**: `./phone-deck` を実行します。ufw を使っている場合は `sudo ufw allow 8765/tcp` も実行してください
+2. `palm-deck` を起動します
+   - **Windows**: `palm-deck.exe` をダブルクリックします。「Windows によって PC が保護されました」と表示されたら「詳細情報」→「実行」を選びます。ファイアウォールの確認が出たら「プライベート ネットワーク」を許可してください
+   - **Mac**: ターミナルで `xattr -d com.apple.quarantine palm-deck` を実行してから `./palm-deck` を実行します（署名していないため、最初の1回だけ必要です）
+   - **Linux**: `./palm-deck` を実行します。ufw を使っている場合は `sudo ufw allow 8765/tcp` も実行してください
 
 3. PC のブラウザに QR コードのページが自動で開くので、PC と**同じ Wi-Fi** につないだスマホで読み取ります（ターミナルにも同じ QR コードが出ます。ページを閉じてしまったら http://localhost:8765/qr で開き直せます）
 
@@ -58,7 +58,7 @@ PC のブラウザで **http://localhost:8765/edit** を開きます（起動時
 
 「アプリのロゴを取得」を押すと、Zoom・OBS・YouTube・Spotify・Discord の「〜を開く」ボタンに、それぞれの公式サイトのアイコンを入れます。
 
-ロゴは各社の商標なので、配布している Phone Deck には入れていません。押したときに公式サイトから取ってきて、この PC の設定フォルダ（`icons/`）にだけ保存します。自分のボタンの見た目として使うためのものなので、取ってきた画像をほかで配ったりはしないでください。
+ロゴは各社の商標なので、配布している Palm Deck には入れていません。押したときに公式サイトから取ってきて、この PC の設定フォルダ（`icons/`）にだけ保存します。自分のボタンの見た目として使うためのものなので、取ってきた画像をほかで配ったりはしないでください。
 
 ### ほかのプログラムからボタンを押す
 
@@ -89,9 +89,9 @@ curl -X POST -H "X-Token: トークン" http://localhost:8765/api/run/ボタン�
 
 | OS | 場所 |
 |---|---|
-| Windows | `%AppData%\phone-deck\buttons.json` |
-| Mac | `~/Library/Application Support/phone-deck/buttons.json` |
-| Linux | `~/.config/phone-deck/buttons.json` |
+| Windows | `%AppData%\palm-deck\buttons.json` |
+| Mac | `~/Library/Application Support/palm-deck/buttons.json` |
+| Linux | `~/.config/palm-deck/buttons.json` |
 
 ```json
 {
@@ -167,9 +167,9 @@ curl -X POST -H "X-Token: トークン" http://localhost:8765/api/run/ボタン�
 ## 起動オプション
 
 ```
-phone-deck -port 8765      # ポート番号を変える
-phone-deck -dir ./mydeck   # 設定ファイルの置き場所を変える
-phone-deck -no-browser     # 起動時にブラウザで QR コードを開かない
+palm-deck -port 8765      # ポート番号を変える
+palm-deck -dir ./mydeck   # 設定ファイルの置き場所を変える
+palm-deck -no-browser     # 起動時にブラウザで QR コードを開かない
 ```
 
 ## 安全性
@@ -201,4 +201,4 @@ go test ./...     # テスト（OBS は偽のサーバーを相手に確かめ�
 
 [MIT License](LICENSE) です。
 
-Zoom・OBS・YouTube・Spotify・Discord などの名前やロゴは、それぞれの会社の商標です。Phone Deck はこれらの会社とは関係ありません。
+Zoom・OBS・YouTube・Spotify・Discord などの名前やロゴは、それぞれの会社の商標です。Palm Deck はこれらの会社とは関係ありません。

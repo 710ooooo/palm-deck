@@ -14,7 +14,7 @@ var qrTemplate = template.Must(template.New("qr").Parse(`<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Phone Deck</title>
+<title>Palm Deck</title>
 <style>
   :root { --bg: #f8fafc; --fg: #0f172a; --muted: #64748b; --card: #fff; }
   @media (prefers-color-scheme: dark) { :root { --bg: #0f172a; --fg: #e2e8f0; --muted: #94a3b8; --card: #1e293b; } }
