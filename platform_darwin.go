@@ -199,3 +199,30 @@ func sendKeys(k keyCombo, focus string) error {
 	_, err := execOutput("osascript", "-e", script)
 	return err
 }
+
+// 文字の入力。keystroke で打つと日本語入力がオンのときに変換されてしまうので、
+// クリップボード経由で貼り付けて、元のクリップボードに戻す
+func typeText(s string, enter bool, focus string) error {
+	script := ""
+	if focus != "" {
+		script = "tell application " + appleString(focus) + " to activate\ndelay 0.3\n"
+	}
+	script += `set old to missing value
+try
+	set old to the clipboard
+end try
+set the clipboard to ` + appleString(s) + `
+tell application "System Events" to keystroke "v" using command down
+delay 0.3
+`
+	if enter {
+		script += "tell application \"System Events\" to key code 36\n"
+	}
+	script += `if old is not missing value then
+	try
+		set the clipboard to old
+	end try
+end if`
+	_, err := execOutput("osascript", "-e", script)
+	return err
+}

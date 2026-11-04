@@ -128,6 +128,10 @@ curl -X POST -H "X-Token: トークン" http://localhost:8765/api/run/ボタン�
 - **`keys`**: キーを押します（例: `ctrl+shift+m`、`alt+a`、`cmd+shift+a`、`k`、`f5`）
   - 修飾キーは `ctrl` / `shift` / `alt`（Mac の option）/ `cmd`（Mac の ⌘、Windows キー、Super キー）
   - `"focus": "YouTube"` を一緒に書くと、タイトルにその文字を含むウィンドウを前に出してからキーを押します（Mac はアプリ名を書きます。例: `"focus": "Discord"`）
+- **`text`**: 文字を入力します（例: `"text": "テストを実行して"`）。Claude などへのよく使う指示や定型文に使います
+  - `"enter": true` を一緒に書くと、入力したあと Enter を押します。`focus` も `keys` と同じように使えます
+  - 日本語も入力できます。Mac はクリップボード経由で貼り付けるので、一瞬クリップボードが書き換わります（終わったら元に戻します）
+  - Linux は X11 なら xdotool、Wayland なら wtype か ydotool が必要です。GNOME の Wayland では wtype が動かないため、ydotool で英数字と記号だけを入力します
 - **`open`**: URL やファイル、フォルダを開きます（`~` はホームフォルダを表します）
 - **`cmd`**: 好きなコマンドを実行します（Windows では cmd.exe、Mac と Linux では sh で実行されます）
 

@@ -377,6 +377,7 @@ document.addEventListener("dragover", e => { if (dragged) e.preventDefault(); })
 function kindText(b) {
   if (b.action) return catalog.actions.find(a => a.name === b.action.split(":")[0])?.label || b.action;
   if (b.keys) return "キー: " + b.keys;
+  if (b.text) return "入力: " + b.text;
   if (b.open) return "開く: " + b.open;
   if (b.cmd) return "コマンド";
   return "動作なし";
@@ -473,12 +474,12 @@ $("template").addEventListener("change", e => {
 });
 
 // ---- ボタンの設定 ----
-const ACTION_KINDS = [["", "なし"], ["action", "用意された操作"], ["keys", "キーを押す"], ["open", "URL・ファイル・フォルダを開く"], ["cmd", "コマンドを実行"]];
+const ACTION_KINDS = [["", "なし"], ["action", "用意された操作"], ["keys", "キーを押す"], ["text", "文字を入力"], ["open", "URL・ファイル・フォルダを開く"], ["cmd", "コマンドを実行"]];
 const STATUS_KINDS = [["", "なし"], ["status", "用意された状態"], ["statusCmd", "コマンドで調べる"]];
 
 // 種類を選んだ直後は中身が空文字なので、undefined かどうかで見分ける
 const has = v => v !== undefined && v !== null;
-const actionKind = b => (has(b.action) ? "action" : has(b.keys) ? "keys" : has(b.open) ? "open" : has(b.cmd) ? "cmd" : "");
+const actionKind = b => (has(b.action) ? "action" : has(b.keys) ? "keys" : has(b.text) ? "text" : has(b.open) ? "open" : has(b.cmd) ? "cmd" : "");
 const statusKind = b => (has(b.status) ? "status" : has(b.statusCmd) ? "statusCmd" : "");
 
 function el(html) {
@@ -705,7 +706,7 @@ function renderForm() {
   const kind = actionKind(b);
   const kindSel = select(ACTION_KINDS, kind);
   kindSel.addEventListener("change", () => {
-    delete b.action; delete b.keys; delete b.focus; delete b.open; delete b.cmd;
+    delete b.action; delete b.keys; delete b.text; delete b.enter; delete b.focus; delete b.open; delete b.cmd;
     if (kindSel.value === "action") b.action = catalog.actions[0].name;
     else if (kindSel.value) b[kindSel.value] = "";
     markDirty(); renderGrid(); renderForm();
@@ -719,6 +720,17 @@ function renderForm() {
         "例: <code>ctrl+shift+m</code> <code>alt+a</code> <code>cmd+shift+a</code> <code>k</code> <code>f5</code>。修飾キーは ctrl / shift / alt / cmd（Mac の ⌘、Windows キー）"),
       field("先に前に出すウィンドウ（省略可）", bindInput(el(`<input placeholder="YouTube">`), () => b.focus, v => (b.focus = v || undefined)),
         "キーは前に出ているウィンドウにしか届きません。アプリが後ろにあると効かないショートカット（Discord や YouTube など）のときに、そのウィンドウのタイトルに含まれる文字を入れます。入れると、そのウィンドウを前に出してからキーを押します。Mac はアプリ名（例: Discord）を入れます。Zoom の「グローバルショートカット」のように、後ろにあっても効くものは空のままで大丈夫です"),
+    );
+  } else if (kind === "text") {
+    const enter = el(`<label class="check"><input type="checkbox"> 入力したあと Enter を押す</label>`);
+    enter.firstChild.checked = !!b.enter;
+    enter.firstChild.addEventListener("change", e => { b.enter = e.target.checked || undefined; markDirty(); });
+    act.append(
+      field("入力する文字", bindInput(el(`<textarea placeholder="テストを実行して"></textarea>`), () => b.text, v => (b.text = v)),
+        "前に出ているウィンドウの、カーソルのある所に打ち込みます。Claude などへのよく使う指示や、定型文の入力に使います。日本語も打てます（Linux の Wayland では、wtype が使えない環境だと英数字だけになります）"),
+      enter,
+      field("先に前に出すウィンドウ（省略可）", bindInput(el(`<input placeholder="ターミナル">`), () => b.focus, v => (b.focus = v || undefined)),
+        "入力先のアプリが後ろにあるときに、そのウィンドウのタイトルに含まれる文字を入れます。入れると、そのウィンドウを前に出してから打ち込みます。Mac はアプリ名（例: Terminal）を入れます。空のままだと、そのとき前に出ているウィンドウに打ち込みます"),
     );
   } else if (kind === "open") {
     act.append(field("開くもの", bindInput(el(`<input placeholder="https://www.youtube.com や ~/Documents">`), () => b.open, v => (b.open = v)),

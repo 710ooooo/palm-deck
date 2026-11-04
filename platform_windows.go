@@ -9,6 +9,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -16,6 +17,7 @@ var (
 	user32         = syscall.NewLazyDLL("user32.dll")
 	kernel32       = syscall.NewLazyDLL("kernel32.dll")
 	procKeybdEvent = user32.NewProc("keybd_event")
+	procSendInput  = user32.NewProc("SendInput")
 	procLock       = user32.NewProc("LockWorkStation")
 	procSendMsg    = user32.NewProc("SendMessageW")
 	procEnumWin    = user32.NewProc("EnumWindows")
@@ -236,6 +238,50 @@ var winKeyCodes = func() map[string]uintptr {
 // 矢印キーなどは「拡張キー」として送らないとテンキー扱いになる
 var winExtended = map[string]bool{"up": true, "down": true, "left": true, "right": true,
 	"home": true, "end": true, "pageup": true, "pagedown": true, "delete": true}
+
+// SendInput に渡す INPUT 構造体（キーボードの分だけ。後ろの余白は MOUSEINPUT と同じ大きさにするため）
+type keybdInput struct {
+	typ uint32
+	ki  struct {
+		vk, scan    uint16
+		flags, time uint32
+		extra       uintptr
+	}
+	_ [8]byte
+}
+
+// 文字の入力。KEYEVENTF_UNICODE で文字そのものを送るので、日本語入力の状態に関係なく日本語も打てる
+func typeText(s string, enter bool, focus string) error {
+	if focus != "" {
+		if err := focusWindow(focus); err != nil {
+			return err
+		}
+	}
+	const inputKeyboard, keyeventfUnicode = 1, 0x0004
+	var in []keybdInput
+	for _, c := range utf16.Encode([]rune(strings.ReplaceAll(s, "\r\n", "\n"))) {
+		if c == '\n' {
+			c = '\r'
+		}
+		for _, up := range []uint32{0, keyeventfKeyup} {
+			var k keybdInput
+			k.typ = inputKeyboard
+			k.ki.scan = c
+			k.ki.flags = keyeventfUnicode | up
+			in = append(in, k)
+		}
+	}
+	if len(in) > 0 {
+		n, _, err := procSendInput.Call(uintptr(len(in)), uintptr(unsafe.Pointer(&in[0])), unsafe.Sizeof(in[0]))
+		if int(n) != len(in) {
+			return fmt.Errorf("文字を入力できませんでした: %v", err)
+		}
+	}
+	if enter {
+		return sendKeys(keyCombo{Key: "enter"}, "")
+	}
+	return nil
+}
 
 func sendKeys(k keyCombo, focus string) error {
 	if focus != "" {

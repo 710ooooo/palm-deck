@@ -199,7 +199,7 @@ func TestDefaultConfig(t *testing.T) {
 			}
 			seen[b.ID] = true
 			n := 0
-			for _, v := range []string{b.Action, b.Open, b.Cmd, b.Keys} {
+			for _, v := range []string{b.Action, b.Open, b.Cmd, b.Keys, b.Text} {
 				if v != "" {
 					n++
 				}
@@ -259,6 +259,7 @@ func TestValidateConfig(t *testing.T) {
 			{ID: "a", Page: "メイン", Action: "obs.scene:シーン1", Status: "obs.scene:シーン1"},
 			{ID: "b", Page: "配信", Keys: "ctrl+shift+m"},
 			{ID: "c", Page: "配信", StatusCmd: "date"}, // 表示だけのボタンも OK
+			{ID: "d", Page: "配信", Text: "テストを実行して", Enter: true},
 		}}
 	}
 	if err := validateConfig(ok()); err != nil {
@@ -276,6 +277,7 @@ func TestValidateConfig(t *testing.T) {
 		"ID 記号":  func(c *Config) { c.Buttons[1].ID = "a/b" },
 		"ないページ":  func(c *Config) { c.Buttons[1].Page = "なし" },
 		"動作 2 つ": func(c *Config) { c.Buttons[1].Cmd = "ls" },
+		"入力とキー":  func(c *Config) { c.Buttons[3].Keys = "enter" },
 		"不明な操作":  func(c *Config) { c.Buttons[0].Action = "nope" },
 		"キー":     func(c *Config) { c.Buttons[1].Keys = "ctrl+" },
 		"状態 2 つ": func(c *Config) { c.Buttons[0].StatusCmd = "date" },

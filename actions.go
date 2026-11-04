@@ -74,12 +74,14 @@ func run(c *Config, b Button) (string, error) {
 			return "", err
 		}
 		return "", sendKeys(k, b.Focus)
+	case b.Text != "":
+		return "", typeText(b.Text, b.Enter, b.Focus)
 	case b.Open != "":
 		return "started", openTarget(expandHome(b.Open))
 	case b.Cmd != "":
 		return runShell(b.Cmd)
 	}
-	return "", errors.New("action / keys / open / cmd のどれかを指定してください")
+	return "", errors.New("action / keys / text / open / cmd のどれかを指定してください")
 }
 
 func expandHome(p string) string {

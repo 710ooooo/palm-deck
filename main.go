@@ -44,7 +44,9 @@ type Button struct {
 	Open   string `json:"open,omitempty"`   // URL やファイル・フォルダを開く
 	Cmd    string `json:"cmd,omitempty"`    // シェルコマンド
 	Keys   string `json:"keys,omitempty"`   // キー操作 (ctrl+shift+m など)
-	Focus  string `json:"focus,omitempty"`  // keys の前に前面に出すウィンドウ（タイトルの一部。Mac はアプリ名）
+	Focus  string `json:"focus,omitempty"`  // keys / text の前に前面に出すウィンドウ（タイトルの一部。Mac はアプリ名）
+	Text   string `json:"text,omitempty"`   // 文字を入力する
+	Enter  bool   `json:"enter,omitempty"`  // text を入力したあと Enter を押す
 
 	// 状態の表示。どちらか 1 つを書く
 	Status    string `json:"status,omitempty"`    // 組み込みの状態 (obs.streaming, spotify.track など)

@@ -267,19 +267,25 @@ func spotifyTrack() (track, error) {
 // --- キー操作 ---
 // X11 で動くアプリは xdotool、Wayland では ydotool（全アプリに効くが、ウィンドウを前面に出せない）
 
+// タイトルに focus を含むウィンドウを前に出す（X11 のウィンドウだけ）
+func focusX(focus string) error {
+	if !has("xdotool") || os.Getenv("DISPLAY") == "" {
+		return errors.New("ウィンドウを前面に出すには xdotool が必要です（sudo apt install xdotool）")
+	}
+	ids, _ := execOutput("xdotool", "search", "--onlyvisible", "--name", focus)
+	id, _, _ := strings.Cut(ids, "\n")
+	if id == "" {
+		return fmt.Errorf("「%s」のウィンドウが見つかりません", focus)
+	}
+	_, err := execOutput("xdotool", "windowactivate", "--sync", id)
+	return err
+}
+
 func sendKeys(k keyCombo, focus string) error {
 	useX := has("xdotool") && os.Getenv("DISPLAY") != ""
 	wayland := os.Getenv("WAYLAND_DISPLAY") != ""
 	if focus != "" {
-		if !useX {
-			return errors.New("ウィンドウを前面に出すには xdotool が必要です（sudo apt install xdotool）")
-		}
-		ids, _ := execOutput("xdotool", "search", "--onlyvisible", "--name", focus)
-		id, _, _ := strings.Cut(ids, "\n")
-		if id == "" {
-			return fmt.Errorf("「%s」のウィンドウが見つかりません", focus)
-		}
-		if _, err := execOutput("xdotool", "windowactivate", "--sync", id); err != nil {
+		if err := focusX(focus); err != nil {
 			return err
 		}
 		return xdotoolKey(k)
@@ -320,6 +326,59 @@ func xdotoolKey(k keyCombo) error {
 	}
 	_, err := execOutput("xdotool", "key", "--clearmodifiers", strings.Join(append(parts, key), "+"))
 	return err
+}
+
+// 文字の入力。X11 は xdotool。Wayland は wtype（日本語も打てるが GNOME では動かない）、
+// だめなら ydotool（英数字と記号だけ。US 配列として打つので、JIS 配列だと記号がずれることがある）
+func typeText(s string, enter bool, focus string) error {
+	useX := has("xdotool") && os.Getenv("DISPLAY") != ""
+	wayland := os.Getenv("WAYLAND_DISPLAY") != ""
+	enterKey := keyCombo{Key: "enter"}
+	if focus != "" || (useX && !wayland) {
+		if focus != "" {
+			if err := focusX(focus); err != nil {
+				return err
+			}
+		} else if !useX {
+			return errors.New("文字の入力には xdotool が必要です（sudo apt install xdotool）")
+		}
+		if _, err := execOutput("xdotool", "type", "--clearmodifiers", "--", s); err != nil {
+			return err
+		}
+		if enter {
+			return xdotoolKey(enterKey)
+		}
+		return nil
+	}
+	if wayland && has("wtype") {
+		cmd := exec.Command("wtype", "-")
+		cmd.Stdin = strings.NewReader(s)
+		if cmd.Run() == nil {
+			if enter {
+				_, err := execOutput("wtype", "-k", "Return")
+				return err
+			}
+			return nil
+		}
+	}
+	if has("ydotool") {
+		for _, r := range s {
+			if r > 0x7e || (r < 0x20 && r != '\n' && r != '\t') {
+				return errors.New("この環境では日本語などの英数字以外は入力できません（Wayland で使える wtype が GNOME では動かないため）")
+			}
+		}
+		if _, err := execOutput("ydotool", "type", "--", s); err != nil {
+			return fmt.Errorf("ydotool が動きません（ydotoold が起動しているか確認してください）: %w", err)
+		}
+		if enter {
+			return ydotoolKey(enterKey)
+		}
+		return nil
+	}
+	if useX {
+		return errors.New("Wayland のアプリには xdotool では入力できません。wtype か ydotool を入れてください")
+	}
+	return errors.New("文字の入力には xdotool・wtype・ydotool のどれかが必要です")
 }
 
 // Linux の入力イベントのキーコード (linux/input-event-codes.h)

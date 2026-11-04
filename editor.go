@@ -188,7 +188,7 @@ func validateConfig(c *Config) error {
 			return fmt.Errorf("ボタン「%s」のページ「%s」がありません", name, b.Page)
 		}
 		n := 0
-		for _, v := range []string{b.Action, b.Keys, b.Open, b.Cmd} {
+		for _, v := range []string{b.Action, b.Keys, b.Text, b.Open, b.Cmd} {
 			if v != "" {
 				n++
 			}
