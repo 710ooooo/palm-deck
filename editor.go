@@ -16,6 +16,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 )
 
@@ -274,7 +275,7 @@ type editTemplate struct {
 
 func editCatalog() map[string]any {
 	var templates []editTemplate
-	for _, b := range defaultConfig().Buttons {
+	for _, b := range append(defaultConfig().Buttons, extraButtons(runtime.GOOS)...) {
 		g := b.Page
 		b.Page, b.Hidden = "", false
 		templates = append(templates, editTemplate{Group: g, Button: b})

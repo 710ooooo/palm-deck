@@ -221,7 +221,7 @@ var winKeyCodes = func() map[string]uintptr {
 		"space": 0x20, "enter": 0x0D, "esc": 0x1B, "tab": 0x09, "backspace": 0x08, "delete": 0x2E,
 		"up": 0x26, "down": 0x28, "left": 0x25, "right": 0x27, "home": 0x24, "end": 0x23,
 		"pageup": 0x21, "pagedown": 0x22, "minus": 0xBD, "equal": 0xBB, "comma": 0xBC,
-		"period": 0xBE, "slash": 0xBF,
+		"period": 0xBE, "slash": 0xBF, "printscreen": 0x2C,
 	}
 	for c := 'a'; c <= 'z'; c++ {
 		m[string(c)] = uintptr(c - 'a' + 'A')

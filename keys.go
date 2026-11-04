@@ -19,6 +19,7 @@ var keyAliases = map[string]string{
 	"pgup": "pageup", "pgdn": "pagedown", "arrowup": "up", "arrowdown": "down",
 	"arrowleft": "left", "arrowright": "right", ".": "period", ",": "comma",
 	"-": "minus", "=": "equal", "/": "slash",
+	"prtsc": "printscreen", "print": "printscreen", "prtscn": "printscreen",
 }
 
 // どの OS でも使えるキー名（OS ごとのキーコード表はこの名前で引く）
@@ -33,7 +34,7 @@ var keyNames = func() map[string]bool {
 	for i := 1; i <= 12; i++ {
 		m[fmt.Sprintf("f%d", i)] = true
 	}
-	for _, k := range strings.Fields("space enter esc tab backspace delete up down left right home end pageup pagedown minus equal comma period slash") {
+	for _, k := range strings.Fields("space enter esc tab backspace delete up down left right home end pageup pagedown minus equal comma period slash printscreen") {
 		m[k] = true
 	}
 	return m

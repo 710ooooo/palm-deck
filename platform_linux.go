@@ -306,6 +306,7 @@ var xdotoolNames = map[string]string{
 	"delete": "Delete", "up": "Up", "down": "Down", "left": "Left", "right": "Right",
 	"home": "Home", "end": "End", "pageup": "Prior", "pagedown": "Next",
 	"minus": "minus", "equal": "equal", "comma": "comma", "period": "period", "slash": "slash",
+	"printscreen": "Print",
 }
 
 func xdotoolKey(k keyCombo) error {
@@ -387,7 +388,7 @@ var linuxKeyCodes = func() map[string]int {
 		"esc": 1, "minus": 12, "equal": 13, "backspace": 14, "tab": 15, "enter": 28,
 		"comma": 51, "period": 52, "slash": 53, "space": 57, "f11": 87, "f12": 88,
 		"home": 102, "up": 103, "pageup": 104, "left": 105, "right": 106, "end": 107,
-		"down": 108, "pagedown": 109, "delete": 111,
+		"down": 108, "pagedown": 109, "delete": 111, "printscreen": 99,
 	}
 	for i, row := range []string{"1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm"} {
 		start := [...]int{2, 16, 30, 44}[i]

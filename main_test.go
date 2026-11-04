@@ -193,7 +193,7 @@ func TestShellStatus(t *testing.T) {
 func TestDefaultConfig(t *testing.T) {
 	for _, goos := range []string{"windows", "darwin", "linux"} {
 		seen := map[string]bool{}
-		for _, b := range appButtons(goos) {
+		for _, b := range append(appButtons(goos), extraButtons(goos)...) {
 			if seen[b.ID] {
 				t.Errorf("%s: id %q が重複しています", goos, b.ID)
 			}

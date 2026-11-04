@@ -171,6 +171,9 @@ func appleString(s string) string {
 }
 
 func sendKeys(k keyCombo, focus string) error {
+	if k.Key == "printscreen" {
+		return errors.New("Mac には PrintScreen キーがありません。スクリーンショットは cmd+shift+3 を使ってください")
+	}
 	var mods []string
 	for _, m := range []struct {
 		on   bool

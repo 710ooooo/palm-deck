@@ -17,6 +17,35 @@ func defaultConfig() Config {
 	}
 }
 
+// 「用意されたボタンから追加」だけに出すボタン（初回の buttons.json には入れない）
+func extraButtons(goos string) []Button {
+	pick := func(win, darwin, linux string) string {
+		switch goos {
+		case "windows":
+			return win
+		case "darwin":
+			return darwin
+		}
+		return linux
+	}
+	const c = "#0891b2"
+	g := "スクリーンショット・録画"
+	bs := []Button{
+		// 画面全体はすぐ保存される（Windows: ピクチャ\スクリーンショット、Mac: デスクトップ、GNOME: ピクチャ/スクリーンショット）
+		{ID: "shot", Page: g, Label: "スクリーンショット", Icon: "📸", Color: c,
+			Keys: pick("cmd+printscreen", "cmd+shift+3", "shift+printscreen")},
+		// 範囲は PC 側で選ぶ
+		{ID: "shot-area", Page: g, Label: "範囲を選んで撮る", Icon: "✂️", Color: c,
+			Keys: pick("cmd+shift+s", "cmd+shift+4", "printscreen")},
+	}
+	if goos == "windows" {
+		// Xbox Game Bar の録画。録画できるのはゲームやアプリのウィンドウで、デスクトップやエクスプローラーは録れない
+		bs = append(bs, Button{ID: "gamebar-record", Page: g, Label: "録画 開始/停止", Icon: "⏺", Color: "#16a34a",
+			Keys: "cmd+alt+r"})
+	}
+	return bs
+}
+
 // OS ごとに違うのは、アプリの起動方法と、ショートカットの修飾キー（Mac は ⌘）
 func appButtons(goos string) []Button {
 	mac := goos == "darwin"
